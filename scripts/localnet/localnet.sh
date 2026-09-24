@@ -111,9 +111,9 @@ cmd_init() {
   jqi "$G" --arg cid "$CHAIN_ID" --argjson adm "$adm" \
     --arg guardian "$GUARDIAN" --arg admin "$ADMIN" --arg relayer "$RELAYER" \
     --arg bundler "$BUNDLER" --arg bhex "$BUNDLER_HEX" --arg attestor "$ATTESTOR" \
-    --arg tusdc "$TUSDC_ADDR" '
+    --arg tusdc "$TUSDC_ADDR" --arg maxgas "${BLOCK_MAX_GAS:-40000000}" '
     .chain_id = $cid
-    | .consensus.params.block.max_gas = "60000000"
+    | .consensus.params.block.max_gas = $maxgas
     | .consensus.params.block.max_bytes = "4194304"
     | .app_state.council.admissions = $adm
     | .app_state.council.params.guardians = [$guardian]
@@ -185,6 +185,7 @@ cmd_init() {
       -e "s#^evm-chain-id = .*#evm-chain-id = $EVM_CHAIN_ID#" \
       -e "s#^min-retain-blocks = .*#min-retain-blocks = 0#" \
       -e "s#^enable-indexer = false#enable-indexer = true#" \
+      -e "s#^pending-tx-proposal-timeout = .*#pending-tx-proposal-timeout = \"${PROPOSAL_TIMEOUT:-600ms}\"#" \
       "$a"
     # JSON-RPC enabled on every localnet node (validators disable it in prod)
     awk 'BEGIN{s=0} /^\[json-rpc\]/{s=1} s&&/^enable = false/{sub(/false/,"true");s=0} {print}' "$a" >"$a.tmp" && mv "$a.tmp" "$a"

@@ -1,0 +1,31 @@
+{
+  "scenario": "erc20",
+  "duration_sec": 30.008960834,
+  "target_rate_tps": 200,
+  "sent": 5994,
+  "accepted_by_mempool": 5994,
+  "rejected_by_mempool": 0,
+  "reject_reasons": {},
+  "included_onchain": 5994,
+  "reverted_onchain": 0,
+  "inclusion_rate": 1,
+  "onchain_tps": 193.29896387330191,
+  "latency_ms": {
+    "max": 1033,
+    "p50": -47,
+    "p95": 607,
+    "p99": 794
+  },
+  "blocks_observed": 29,
+  "block_time_ms": {
+    "max": 1405,
+    "p50": 1147,
+    "p95": 1364
+  },
+  "max_tx_per_block": 277,
+  "block_gas_utilization": {
+    "max": 0.4155,
+    "p50": 0.3585
+  },
+  "max_sponsored_gas_share": 0
+}
