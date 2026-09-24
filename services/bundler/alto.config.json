@@ -1,0 +1,13 @@
+{
+  "entrypoints": "0x4337084D9E255Ff0702461CF8895CE9E3b5Ff108",
+  "safe-mode": false,
+  "port": 4337,
+  "log-level": "info",
+  "min-executor-balance": "1000000000000000000000",
+  "max-block-range": 2000,
+  "eip-7702-support": true,
+  "balance-override": true,
+  "code-override-support": true,
+  "deploy-simulations-contract": true,
+  "network-name": "vaporchain"
+}

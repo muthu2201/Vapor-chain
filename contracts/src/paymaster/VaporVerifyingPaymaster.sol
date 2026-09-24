@@ -45,7 +45,9 @@ contract VaporVerifyingPaymaster is VaporPaymasterBase {
     /// @notice Allowlisted EIP-7702 delegate implementations.
     mapping(address => bool) public allowedDelegates;
 
-    event Sponsored(uint64 indexed appId, address indexed sender, bytes32 indexed userOpHash, uint256 actualGasCost);
+    event Sponsored(
+        uint64 indexed appId, address indexed sender, bytes32 indexed userOpHash, uint256 actualGasCost, uint256 feePerGas
+    );
     event SignerProposed(address indexed signer, uint64 eta);
     event SignerChanged(address indexed previous, address indexed current);
     event DelegateAllowed(address indexed implementation, bool allowed);
@@ -171,8 +173,11 @@ contract VaporVerifyingPaymaster is VaporPaymasterBase {
     }
 
     /// @dev Emits a per-op event the sponsor service uses to meter quota usage.
-    function _postOp(PostOpMode, bytes calldata context, uint256 actualGasCost, uint256) internal override {
+    function _postOp(PostOpMode, bytes calldata context, uint256 actualGasCost, uint256 actualUserOpFeePerGas)
+        internal
+        override
+    {
         (uint64 appId, address sender, bytes32 userOpHash) = abi.decode(context, (uint64, address, bytes32));
-        emit Sponsored(appId, sender, userOpHash, actualGasCost);
+        emit Sponsored(appId, sender, userOpHash, actualGasCost, actualUserOpFeePerGas);
     }
 }

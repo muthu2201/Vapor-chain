@@ -111,7 +111,7 @@ contract VaporVerifyingPaymasterTest is Test {
         op = _signAccount(op, ownerW.privateKey);
         uint256 depBefore = pm.getDeposit();
         vm.expectEmit(true, true, false, false, address(pm));
-        emit VaporVerifyingPaymaster.Sponsored(7, op.sender, bytes32(0), 0);
+        emit VaporVerifyingPaymaster.Sponsored(7, op.sender, bytes32(0), 0, 0);
         _handle(op);
         assertEq(counter.n(), 1, "call executed");
         assertLt(pm.getDeposit(), depBefore, "paymaster paid");

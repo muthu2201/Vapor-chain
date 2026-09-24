@@ -1,0 +1,13 @@
+{
+  "name": "@vaporchain/bundler",
+  "private": true,
+  "version": "1.0.0",
+  "description": "VaporChain ERC-4337 bundler (Pimlico Alto) pinned + configured for the sponsored lane",
+  "license": "SEE LICENSE IN ../../LICENSE",
+  "scripts": {
+    "start": "alto --config ./alto.config.json"
+  },
+  "dependencies": {
+    "@pimlico/alto": "0.0.21"
+  }
+}

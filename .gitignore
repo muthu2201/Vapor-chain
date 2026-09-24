@@ -26,3 +26,5 @@ coverage/
 .idea/
 .vscode/
 *.swp
+services/bundler/node_modules/
+archive/
