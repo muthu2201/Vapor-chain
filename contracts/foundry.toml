@@ -1,0 +1,37 @@
+# Copyright (c) 2026 VaporChain / muthu2201. All rights reserved.
+# Provenance: VAPOR-6eabb1be532bdef4
+[profile.default]
+src = "src"
+test = "test"
+script = "script"
+out = "out"
+libs = ["lib"]
+solc_version = "0.8.37"
+# cosmos/evm v0.7.3 enables forks up to Prague (EIP-7702); Osaka is NOT active.
+evm_version = "prague"
+optimizer = true
+optimizer_runs = 1_000_000
+via_ir = true
+bytecode_hash = "none"
+cbor_metadata = false
+remappings = [
+  "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+  "account-abstraction/=lib/account-abstraction/contracts/",
+  "forge-std/=lib/forge-std/src/",
+]
+fs_permissions = [{ access = "read", path = "./deploy" }]
+
+[profile.default.fuzz]
+runs = 1024
+
+[profile.default.invariant]
+runs = 256
+depth = 64
+fail_on_revert = false
+
+[profile.ci.fuzz]
+runs = 10_000
+
+[rpc_endpoints]
+localnet = "http://127.0.0.1:8545"
+testnet = "${VAPOR_TESTNET_RPC}"
