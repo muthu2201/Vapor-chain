@@ -27,4 +27,4 @@ coverage/
 .vscode/
 *.swp
 services/bundler/node_modules/
-archive/
+/archive/

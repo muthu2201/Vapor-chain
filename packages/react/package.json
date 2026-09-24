@@ -1,0 +1,42 @@
+{
+  "name": "@vaporchain/react",
+  "version": "1.0.0",
+  "description": "React hooks for VaporChain: gasless checkout, embedded wallet, sponsor quota, bring-in bridging, token launch",
+  "license": "SEE LICENSE IN LICENSE",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" }
+  },
+  "files": ["dist", "LICENSE", "README.md"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --dir test/unit",
+    "test:e2e": "vitest run --dir test/e2e"
+  },
+  "dependencies": {
+    "@vaporchain/sdk": "workspace:*"
+  },
+  "peerDependencies": {
+    "@tanstack/react-query": "^5.103.2",
+    "react": "^19.3.0",
+    "viem": "^2.56.8"
+  },
+  "devDependencies": {
+    "@tanstack/react-query": "5.103.2",
+    "@testing-library/react": "16.3.3",
+    "@types/node": "26.6.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "fake-indexeddb": "6.2.5",
+    "happy-dom": "20.14.5",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "typescript": "7.0.2",
+    "viem": "2.56.8",
+    "vitest": "5.0.1"
+  }
+}

@@ -9,6 +9,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -28,6 +29,13 @@ func writeJSON(w http.ResponseWriter, code int, v any) {
 	w.Header().Set("Cache-Control", "public, max-age=5")
 	w.WriteHeader(code)
 	_ = json.NewEncoder(w).Encode(v)
+}
+
+// internalError logs the cause server-side and returns a generic message:
+// database errors can reveal schema and query details to a caller.
+func internalError(w http.ResponseWriter, r *http.Request, err error) {
+	slog.Error("indexer api query failed", "path", r.URL.Path, "err", err)
+	writeJSON(w, 500, map[string]string{"error": "internal error"})
 }
 
 func intParam(r *http.Request, k string, def, max int) int {
@@ -56,7 +64,24 @@ func (a *API) Handler() http.Handler {
 	mux.HandleFunc("GET /v1/apps/{id}/settlements", a.settlements)
 	mux.HandleFunc("GET /v1/apps/{id}/sponsored", a.sponsored)
 	mux.HandleFunc("GET /v1/address/{addr}/txs", a.addressTxs)
-	return mux
+	return cors(mux)
+}
+
+// cors: the API is public, read-only and cookie-less, so any origin may read
+// it from a browser (dashboards, explorers, the reference app).
+func cors(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Origin") != "" {
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+			w.Header().Set("Access-Control-Max-Age", "600")
+		}
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func (a *API) q(ctx context.Context, sql string, args ...any) ([]map[string]any, error) {
@@ -96,7 +121,7 @@ func (a *API) stats(w http.ResponseWriter, r *http.Request) {
 	         (SELECT count(*) FROM settlements WHERE time > now() - interval '24 hours') AS settlements_24h,
 	         (SELECT COALESCE(sum(fee),0)::TEXT FROM settlements WHERE time > now() - interval '24 hours') AS fees_24h`)
 	if err != nil {
-		writeJSON(w, 500, map[string]string{"error": err.Error()})
+		internalError(w, r, err)
 		return
 	}
 	writeJSON(w, 200, res[0])
@@ -114,7 +139,7 @@ func (a *API) revenue(w http.ResponseWriter, r *http.Request) {
 	  FROM settlements WHERE app_id=$1 AND time > now() - make_interval(days => $2)
 	  GROUP BY 1,2 ORDER BY 1,2`, id, days)
 	if err != nil {
-		writeJSON(w, 500, map[string]string{"error": err.Error()})
+		internalError(w, r, err)
 		return
 	}
 	writeJSON(w, 200, map[string]any{"app_id": id, "days": days, "series": res})
@@ -130,7 +155,7 @@ func (a *API) users(w http.ResponseWriter, r *http.Request) {
 	res, err := a.q(r.Context(), `SELECT date_trunc('day', time) AS day, count(DISTINCT payer) AS unique_payers, count(*) AS payments
 	  FROM settlements WHERE app_id=$1 AND time > now() - make_interval(days => $2) GROUP BY 1 ORDER BY 1`, id, days)
 	if err != nil {
-		writeJSON(w, 500, map[string]string{"error": err.Error()})
+		internalError(w, r, err)
 		return
 	}
 	writeJSON(w, 200, map[string]any{"app_id": id, "days": days, "series": res})
@@ -146,7 +171,7 @@ func (a *API) settlements(w http.ResponseWriter, r *http.Request) {
 	res, err := a.q(r.Context(), `SELECT height, time, payer, payee, denom, amount::TEXT, fee::TEXT, net::TEXT, app_share::TEXT, referrer
 	  FROM settlements WHERE app_id=$1 ORDER BY height DESC, seq DESC LIMIT $2`, id, limit)
 	if err != nil {
-		writeJSON(w, 500, map[string]string{"error": err.Error()})
+		internalError(w, r, err)
 		return
 	}
 	writeJSON(w, 200, map[string]any{"app_id": id, "items": res})
@@ -161,7 +186,7 @@ func (a *API) sponsored(w http.ResponseWriter, r *http.Request) {
 	res, err := a.q(r.Context(), `SELECT count(*) AS ops, COALESCE(sum(gas_cost),0)::TEXT AS credits_spent,
 	    count(DISTINCT sender) AS unique_senders FROM sponsored_ops WHERE app_id=$1`, id)
 	if err != nil {
-		writeJSON(w, 500, map[string]string{"error": err.Error()})
+		internalError(w, r, err)
 		return
 	}
 	writeJSON(w, 200, map[string]any{"app_id": id, "totals": res[0]})
@@ -178,7 +203,7 @@ func (a *API) addressTxs(w http.ResponseWriter, r *http.Request) {
 	res, err := a.q(r.Context(), `SELECT hash, height, sender, recipient, value::TEXT, gas_used, status FROM evm_txs
 	  WHERE sender=$1 OR recipient=$1 ORDER BY height DESC, idx DESC LIMIT $2`, b, limit)
 	if err != nil {
-		writeJSON(w, 500, map[string]string{"error": err.Error()})
+		internalError(w, r, err)
 		return
 	}
 	writeJSON(w, 200, map[string]any{"address": addr, "items": res})

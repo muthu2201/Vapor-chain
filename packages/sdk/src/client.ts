@@ -33,7 +33,8 @@ export interface VaporClientConfig {
   appId?: bigint
   /** Protocol deployments (from contracts/deployments/<chainId>.json). */
   contracts: { tokenFactory: Address; usdc: Address }
-  skip?: { apiKey?: string; affiliateAddressByChain?: Record<string, string> }
+  /** Skip:Go API (apiUrl defaults to https://api.skip.build; point it at your proxy to keep the API key server-side). */
+  skip?: { apiUrl?: string; apiKey?: string; affiliateAddressByChain?: Record<string, string> }
 }
 
 export type TxHandle = { kind: 'tx'; hash: Hash } | { kind: 'userop'; hash: Hex; txHash: Hash }

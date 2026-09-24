@@ -17,7 +17,6 @@ import (
 	"math/big"
 	"net"
 	"net/http"
-	"strings"
 	"sync"
 	"time"
 
@@ -54,6 +53,12 @@ type Config struct {
 	Validity      time.Duration
 	RatePerSecond float64
 	Burst         int
+	// TrustedProxies are the load balancers allowed to set X-Forwarded-For.
+	// Empty means the service is reached directly and XFF is ignored.
+	TrustedProxies []*net.IPNet
+	// CORSOrigins allowed to call from browsers; empty or "*" allows any
+	// (no credentials are ever accepted, so "*" exposes nothing extra).
+	CORSOrigins []string
 }
 
 type Server struct {
@@ -111,8 +116,8 @@ func (s *Server) limiter(ip string) *rate.Limiter {
 	defer s.mu.Unlock()
 	l, ok := s.limiters[ip]
 	if !ok {
-		if len(s.limiters) > 100_000 { // bound memory under IP-rotation attacks
-			s.limiters = map[string]*rate.Limiter{}
+		if len(s.limiters) >= maxLimiters {
+			s.evictIdleLocked()
 		}
 		l = rate.NewLimiter(rate.Limit(s.cfg.RatePerSecond), s.cfg.Burst)
 		s.limiters[ip] = l
@@ -120,12 +125,24 @@ func (s *Server) limiter(ip string) *rate.Limiter {
 	return l
 }
 
-func clientIP(r *http.Request) string {
-	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		return strings.TrimSpace(strings.Split(xff, ",")[0])
+// maxLimiters bounds memory. Keys are real peer addresses (see ClientIP), so
+// reaching it needs that many distinct source IPs.
+const maxLimiters = 100_000
+
+// evictIdleLocked drops limiters whose bucket is full again (clients that
+// have been quiet), so a flood of new IPs cannot reset the budget of clients
+// that are actively being throttled. Falls back to a full reset only if every
+// tracked client is mid-burst.
+func (s *Server) evictIdleLocked() {
+	burst := float64(s.cfg.Burst)
+	for k, l := range s.limiters {
+		if l.Tokens() >= burst {
+			delete(s.limiters, k)
+		}
 	}
-	host, _, _ := net.SplitHostPort(r.RemoteAddr)
-	return host
+	if len(s.limiters) >= maxLimiters {
+		s.limiters = map[string]*rate.Limiter{}
+	}
 }
 
 func (s *Server) Handler() http.Handler {
@@ -139,22 +156,18 @@ func (s *Server) Handler() http.Handler {
 		w.WriteHeader(http.StatusOK)
 	})
 	mux.HandleFunc("/", s.handleRPC)
-	return mux
+	return CORS(s.cfg.CORSOrigins, "POST, OPTIONS", mux)
 }
 
 func (s *Server) handleRPC(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	defer func() { mLatency.Observe(time.Since(start).Seconds()) }()
 	w.Header().Set("Content-Type", "application/json")
-	if r.Method == http.MethodOptions {
-		w.WriteHeader(http.StatusNoContent)
-		return
-	}
 	if r.Method != http.MethodPost {
 		http.Error(w, `{"error":"POST only"}`, http.StatusMethodNotAllowed)
 		return
 	}
-	if !s.limiter(clientIP(r)).Allow() {
+	if !s.limiter(ClientIP(r, s.cfg.TrustedProxies)).Allow() {
 		mRequests.WithLabelValues("any", "rate_limited").Inc()
 		http.Error(w, `{"jsonrpc":"2.0","error":{"code":-32005,"message":"rate limited"}}`, http.StatusTooManyRequests)
 		return

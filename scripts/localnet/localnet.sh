@@ -186,7 +186,10 @@ cmd_init() {
       -e "s#^min-retain-blocks = .*#min-retain-blocks = 0#" \
       -e "s#^enable-indexer = false#enable-indexer = true#" \
       -e "s#^pending-tx-proposal-timeout = .*#pending-tx-proposal-timeout = \"${PROPOSAL_TIMEOUT:-600ms}\"#" \
+      -e "s#^enabled-unsafe-cors = false#enabled-unsafe-cors = true#" \
       "$a"
+    # (CORS on the REST/JSON-RPC API: the dev web app on localhost:3000 calls
+    #  the node directly. Public networks put CORS on the gateway instead.)
     # JSON-RPC enabled on every localnet node (validators disable it in prod)
     awk 'BEGIN{s=0} /^\[json-rpc\]/{s=1} s&&/^enable = false/{sub(/false/,"true");s=0} {print}' "$a" >"$a.tmp" && mv "$a.tmp" "$a"
     awk 'BEGIN{s=0} /^\[api\]/{s=1} s&&/^enable = false/{sub(/false/,"true");s=0} {print}' "$a" >"$a.tmp" && mv "$a.tmp" "$a"

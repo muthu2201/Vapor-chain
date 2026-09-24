@@ -71,6 +71,16 @@ func addrSet(list string) map[common.Address]bool {
 	return out
 }
 
+func splitList(list string) []string {
+	var out []string
+	for _, v := range strings.Split(list, ",") {
+		if v = strings.TrimSpace(v); v != "" {
+			out = append(out, v)
+		}
+	}
+	return out
+}
+
 func envInt(k string, def int) int {
 	if v, err := strconv.Atoi(os.Getenv(k)); err == nil {
 		return v
@@ -125,10 +135,17 @@ func main() {
 		AllowedDelegates:  addrSet(env("VAPOR_ALLOWED_DELEGATES", "0x4Cd241E8d1510e30b2076397afc7508Ae59C66c9")),
 		AllowedFactories:  addrSet(os.Getenv("VAPOR_ALLOWED_FACTORIES")),
 	}, cc)
+	trusted, err := server.ParseCIDRs(os.Getenv("VAPOR_TRUSTED_PROXIES"))
+	if err != nil {
+		log.Error("parse VAPOR_TRUSTED_PROXIES", "err", err)
+		os.Exit(1)
+	}
 	srv := server.New(server.Config{
 		ChainID: chainID, EntryPoint: entryPoint, Paymaster: paymaster, SignerKey: key,
 		Validity:      time.Duration(envInt("VAPOR_VALIDITY_SECONDS", 300)) * time.Second,
 		RatePerSecond: float64(envInt("VAPOR_RATE_PER_IP", 20)), Burst: envInt("VAPOR_RATE_BURST", 40),
+		TrustedProxies: trusted,
+		CORSOrigins:    splitList(os.Getenv("VAPOR_CORS_ORIGINS")),
 	}, pol, st, log)
 
 	go reconcile.New(eth, st, paymaster, log).Run(ctx)

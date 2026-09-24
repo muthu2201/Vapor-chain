@@ -11,5 +11,6 @@
   "deploy-simulations-contract": true,
   "network-name": "vaporchain",
   "binary-search-gas-allowance": "3000000",
-  "binary-search-max-retries": 6
+  "binary-search-max-retries": 6,
+  "enable-cors": true
 }
