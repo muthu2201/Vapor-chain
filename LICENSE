@@ -1,0 +1,82 @@
+VaporChain Proprietary License (v1.0)
+SPDX-License-Identifier: LicenseRef-VaporChain-Proprietary
+Copyright (c) 2026 VaporChain / muthu2201 ("Licensor"). All rights reserved.
+Provenance: VAPOR-6eabb1be532bdef4
+
+================================================================================
+NOT OPEN SOURCE. NOT LICENSED FOR USE. This is a source-available, all-rights-
+reserved proprietary work. Absent a separate written agreement signed by the
+Licensor, you have NO license to use, copy, run, deploy, modify, or distribute
+this software or any part of it, and NO patent rights are granted.
+================================================================================
+
+This license is intentionally strict. Read it before doing anything with this
+code. This document is a license, not legal advice; the Licensor is not your
+lawyer. Terms are governed by applicable law and, where a term is unenforceable,
+the remainder stays in force.
+
+1. DEFINITIONS
+   "Software" means all contents of this repository EXCEPT (a) files under
+   third-party directories (e.g. contracts/lib/**, vendored modules) and (b)
+   files whose own header names a different license; those are governed by their
+   own licenses (see THIRD_PARTY_NOTICES.md and NOTICE). "You" means the person
+   or entity accessing the Software.
+
+2. NO LICENSE GRANTED
+   The Licensor grants You no rights. You may not use, reproduce, execute, host,
+   deploy, sublicense, sell, lease, distribute, publicly display, or create
+   derivative works of the Software, in whole or in part, in source or compiled
+   form, on any network or device, for any purpose, commercial or non-commercial.
+   Viewing the Software because it was shared with You does not grant any right
+   beyond that viewing.
+
+3. NO REVERSE ENGINEERING FOR REUSE; NO LAUNDERING
+   You may not use the Software — nor any translation, transpilation,
+   re-implementation, summary, embedding, fine-tune, or output of any automated
+   tool or AI system that was given the Software as input — to build, train,
+   or assist in building a product, protocol, chain, or service that competes
+   with or substantially reproduces the Software or its design. Removing,
+   obscuring, or altering the provenance markers, copyright notices, or this
+   license does not change these terms and is itself a breach.
+
+4. PROVENANCE / WATERMARKS
+   The Software contains authorship fingerprints and canaries (see
+   chain/provenance and scripts/provenance/scan.sh). They are forensic evidence
+   of origin only; they do not alter, disable, or surveil any deployment. Their
+   presence, and any derivation they demonstrate, may be used as evidence of a
+   breach of this license. You may not remove or defeat them.
+
+5. CONFIDENTIALITY
+   The Software is confidential. If it was disclosed to You, You must keep it
+   confidential, not share it, and use it only as expressly permitted in a
+   signed agreement. If You received it without authorization, You must not use
+   it and must notify the Licensor and delete all copies.
+
+6. FEEDBACK
+   Any feedback You provide about the Software may be used by the Licensor
+   without restriction or obligation.
+
+7. TERMINATION
+   Any breach terminates whatever access You had, immediately and automatically.
+   Upon termination You must cease all use and destroy all copies. Sections
+   3–5, 8, and 9 survive termination.
+
+8. NO WARRANTY
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND NON-INFRINGEMENT. The Software
+   is pre-audit and may contain defects; it is not certified for handling real
+   value.
+
+9. LIMITATION OF LIABILITY
+   TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE LICENSOR SHALL NOT BE LIABLE FOR
+   ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR EXEMPLARY
+   DAMAGES, OR ANY LOSS OF FUNDS, PROFITS, OR DATA, ARISING FROM OR RELATED TO
+   THE SOFTWARE OR THIS LICENSE, EVEN IF ADVISED OF THE POSSIBILITY.
+
+10. RELATIONSHIP TO THIRD-PARTY LICENSES
+   Nothing here purports to restrict rights you have under the third-party
+   licenses listed in THIRD_PARTY_NOTICES.md for those third-party components.
+   This license applies only to the Software as defined in Section 1.
+
+To obtain a license to use any part of the Software, contact the Licensor.

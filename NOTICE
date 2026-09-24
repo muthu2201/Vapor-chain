@@ -1,0 +1,14 @@
+VaporChain
+Copyright (c) 2026 VaporChain / muthu2201. All rights reserved.
+Provenance: VAPOR-6eabb1be532bdef4
+
+This product includes software derived from the Cosmos EVM project ("evmd"
+example application), Copyright (c) Interchain Foundation and cosmos/evm
+authors, licensed under the Apache License, Version 2.0. Portions of
+chain/app, chain/cmd and related wiring are derived from that source and remain
+under Apache-2.0; see THIRD_PARTY_NOTICES.md for the full list of third-party
+components, their copyrights and licenses, and a copy of the Apache-2.0 license
+where required.
+
+All other files, and the VaporChain protocol design as a whole, are proprietary
+and confidential under the repository LICENSE.
