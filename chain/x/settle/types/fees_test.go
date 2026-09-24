@@ -20,14 +20,14 @@ func usdc() FeeAsset {
 func TestComputeFeeBlueprintExamples(t *testing.T) {
 	a := usdc()
 	cases := []struct{ amount, fee int64 }{
-		{100_000_000, 1_000_000},     // 100 USDC -> 1 USDC (blueprint worked example)
-		{2_000_000, 20_000},          // 2 USDC sword -> 0.02
-		{250_000, 2_500},             // at micro threshold: 1% (2500 > floor 2000)
-		{200_000, 2_000},             // just above floor math: 0.2 USDC below threshold -> pure 1%
-		{100_000, 1_000},             // 0.10 USDC micro payment: no floor
-		{10_000, 100},                // 0.01 USDC tip: 1%, no 20% floor tax
-		{1_000_000_000, 5_000_000},   // 1000 USDC capped at 5 USDC
-		{1, 0},                       // dust rounds down to zero fee
+		{100_000_000, 1_000_000},   // 100 USDC -> 1 USDC (blueprint worked example)
+		{2_000_000, 20_000},        // 2 USDC sword -> 0.02
+		{250_000, 2_500},           // at micro threshold: 1% (2500 > floor 2000)
+		{200_000, 2_000},           // just above floor math: 0.2 USDC below threshold -> pure 1%
+		{100_000, 1_000},           // 0.10 USDC micro payment: no floor
+		{10_000, 100},              // 0.01 USDC tip: 1%, no 20% floor tax
+		{1_000_000_000, 5_000_000}, // 1000 USDC capped at 5 USDC
+		{1, 0},                     // dust rounds down to zero fee
 	}
 	for _, c := range cases {
 		got := ComputeFee(math.NewInt(c.amount), a, 100)

@@ -71,7 +71,7 @@ func Cap(maxBlockGas uint64, bps uint32) uint64 {
 		return 0
 	}
 	// maxBlockGas * bps / 10_000 without overflow for any realistic block gas
-	return maxBlockGas / 10_000 * uint64(bps) + (maxBlockGas%10_000)*uint64(bps)/10_000
+	return maxBlockGas/10_000*uint64(bps) + (maxBlockGas%10_000)*uint64(bps)/10_000
 }
 
 // Selector is a baseapp.TxSelector that behaves exactly like the SDK default

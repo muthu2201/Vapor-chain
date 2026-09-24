@@ -30,10 +30,10 @@ import (
 	"github.com/spf13/cast"
 
 	// Force-load the tracer engines to trigger registration
-	_ "github.com/ethereum/go-ethereum/eth/tracers/js"
-	_ "github.com/ethereum/go-ethereum/eth/tracers/native"
 	"github.com/ethereum/go-ethereum/common"
 	gethvm "github.com/ethereum/go-ethereum/core/vm"
+	_ "github.com/ethereum/go-ethereum/eth/tracers/js"
+	_ "github.com/ethereum/go-ethereum/eth/tracers/native"
 
 	abci "github.com/cometbft/cometbft/abci/types"
 	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
@@ -704,11 +704,11 @@ func (app *VaporApp) PreBlocker(ctx sdk.Context, _ *abci.RequestFinalizeBlock) (
 
 func (app *VaporApp) LoadHeight(height int64) error { return app.LoadVersion(height) }
 
-func (app *VaporApp) LegacyAmino() *codec.LegacyAmino           { return app.legacyAmino }
-func (app *VaporApp) AppCodec() codec.Codec                     { return app.appCodec }
+func (app *VaporApp) LegacyAmino() *codec.LegacyAmino            { return app.legacyAmino }
+func (app *VaporApp) AppCodec() codec.Codec                      { return app.appCodec }
 func (app *VaporApp) InterfaceRegistry() types.InterfaceRegistry { return app.interfaceRegistry }
-func (app *VaporApp) TxConfig() client.TxConfig                 { return app.txConfig }
-func (app *VaporApp) GetTxConfig() client.TxConfig              { return app.txConfig }
+func (app *VaporApp) TxConfig() client.TxConfig                  { return app.txConfig }
+func (app *VaporApp) GetTxConfig() client.TxConfig               { return app.txConfig }
 
 // DefaultGenesis returns VaporChain's default genesis (see genesis.go).
 func (app *VaporApp) DefaultGenesis() map[string]json.RawMessage {
