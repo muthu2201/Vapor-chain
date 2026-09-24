@@ -1,63 +1,37 @@
-<!-- Copyright (c) 2026 VaporChain / muthu2201. All rights reserved. Provenance: VAPOR-6eabb1be532bdef4 -->
-# Third-party notices
+<!-- Copyright 2026 VaporChain / muthu2201. Licensed under Apache-2.0. Provenance: VAPOR-6eabb1be532bdef4 -->
+# Third-party notices (SDK distribution)
 
-VaporChain depends on and, in places, derives from third-party software. This
-file lists those components and their licenses. Inclusion here does not place any
-proprietary VaporChain code under these licenses; it records the terms of the
-third-party parts. Pinned versions are in `chain/go.mod`, `services/*/go.mod`,
-`contracts/foundry.toml` / `contracts/lib`, and the JS lockfile.
+This public SDK distribution depends on the following third-party software. Their
+licenses govern those components; the Apache-2.0 license of this distribution
+applies to VaporChain's own SDK, hooks, example contracts and docs.
 
-## Chain / Go
+## JavaScript / TypeScript
 
-| component | version | license | notes |
-|---|---|---|---|
-| github.com/cosmos/evm (evmd) | v0.7.3 | Apache-2.0 | `chain/app`, `chain/cmd` derive from the evmd example; see NOTICE |
-| github.com/cosmos/cosmos-sdk | v0.54.4 | Apache-2.0 | |
-| github.com/cometbft/cometbft | v0.39.4 | Apache-2.0 | |
-| github.com/cosmos/ibc-go/v11 | v11.2.0 | Apache-2.0 | callbacks, ratelimit, PFM, transfer |
-| github.com/cosmos/go-ethereum | v1.17.2-cosmos-1 | **LGPL-3.0** | replaces ethereum/go-ethereum; used as a library (dynamically linkable); unmodified |
-| github.com/ethereum/go-ethereum | v1.17.6 | LGPL-3.0 / GPL-3.0 | client libraries in tools/services |
-| github.com/parquet-go/parquet-go | v0.32.0 | Apache-2.0 | indexer archive |
-| github.com/jackc/pgx/v5 | v5.11.0 | MIT | Postgres driver |
-| github.com/prometheus/client_golang | v1.24.1 | Apache-2.0 | metrics |
+| component | license |
+|---|---|
+| viem | MIT |
+| wagmi | MIT |
+| @tanstack/react-query | MIT |
+| next, react, react-dom | MIT |
+| tailwindcss, @tailwindcss/postcss | MIT |
+| @playwright/test | Apache-2.0 (test only) |
+| vitest, @testing-library/react, happy-dom, fake-indexeddb | MIT (test only) |
+| typescript | Apache-2.0 (dev only) |
 
-The LGPL-3.0 geth fork is used as an imported library and is not modified; its
-source at the pinned version is available from the upstream project. Replacing it
-with a compatible build is possible per the LGPL.
+## Solidity (example contracts)
 
-## Contracts / Solidity
+| component | license | notes |
+|---|---|---|
+| OpenZeppelin/openzeppelin-contracts | MIT | ERC-20, permit, utils |
+| eth-infinitism/account-abstraction | MIT interfaces / GPL-3.0 core | example contracts import only the MIT interfaces (IEntryPoint, PackedUserOperation, etc.) |
+| foundry-rs/forge-std | MIT / Apache-2.0 | test only |
 
-| component | version | license | notes |
-|---|---|---|---|
-| eth-infinitism account-abstraction | v0.8.0 | **GPL-3.0** (core) / MIT (interfaces) | our contracts import only the **MIT** interfaces and helpers (IEntryPoint, PackedUserOperation, BaseAccount, Simple7702Account, Helpers). EntryPoint/StakeManager/NonceManager/SenderCreator are GPL-3.0 and are deployed as canonical bytecode, not compiled into our contracts. |
-| OpenZeppelin/openzeppelin-contracts | 5.6.x | MIT | |
-| foundry-rs/forge-std | current | MIT/Apache-2.0 | test-only |
+Install these with `forge install` (see README); they are not vendored here.
 
-The canonical EntryPoint v0.8 and Simple7702Account are deployed by replaying
-the audited mainnet CREATE2 payloads; we distribute their addresses, not
-modified source.
+## Network services
 
-## Services / JS
+- **Skip:Go** REST API — used by the SDK's bridging helpers as a network service.
 
-| component | version | license | notes |
-|---|---|---|---|
-| @pimlico/alto | 0.0.21 | **GPL-3.0** | run as a standalone, unmodified bundler process (`services/bundler`); not linked into VaporChain code |
-| viem | 2.56.x | MIT | |
-| wagmi | 3.7.x | MIT | |
-| next / react / react-dom | 16.x / 19.x | MIT | |
-| @tanstack/react-query | 5.x | MIT | |
-| tailwindcss | 4.x | MIT | |
-| @playwright/test, vitest | — | Apache-2.0 / MIT | test-only |
-
-Alto (GPL-3.0) is invoked as a separate process over JSON-RPC and is neither
-modified nor statically linked into any VaporChain binary; running it alongside
-VaporChain does not place VaporChain code under the GPL.
-
-## Data / networks
-
-- Skip:Go REST API — used as a network service for cross-chain routing.
-- USDC.inj / testnet USDC stand-in — the testnet `uusdc` is a value-less
-  stand-in; mainnet uses USDC over IBC.
-
-If any attribution here is incomplete or incorrect, it is an oversight; corrections
-are welcome and do not waive any third-party rights.
+The `@vaporchain/sdk` ABI files include the ABIs of protocol contracts (e.g. the
+verifying paymaster) purely as data for decoding on-chain events; the protocol
+contract source is not part of this distribution.

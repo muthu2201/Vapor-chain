@@ -1,4 +1,4 @@
-# Copyright (c) 2026 VaporChain / muthu2201. All rights reserved.
+# Copyright (c) 2026 VaporChain / muthu2201. Licensed under the Apache License, Version 2.0 (see LICENSE).
 # Provenance: VAPOR-6eabb1be532bdef4
 [profile.default]
 src = "src"
@@ -19,7 +19,6 @@ remappings = [
   "account-abstraction/=lib/account-abstraction/contracts/",
   "forge-std/=lib/forge-std/src/",
 ]
-fs_permissions = [{ access = "read", path = "./deploy" }]
 
 [profile.default.fuzz]
 runs = 1024

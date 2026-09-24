@@ -1,5 +1,5 @@
-# Copyright (c) 2026 VaporChain / muthu2201. All rights reserved.
-# Proprietary. See LICENSE. Provenance: VAPOR-6eabb1be532bdef4
+# Copyright (c) 2026 VaporChain / muthu2201. Licensed under the Apache License, Version 2.0 (see LICENSE).
+# SPDX-License-Identifier: Apache-2.0 - Provenance: VAPOR-6eabb1be532bdef4
 #
 # Reference web app. Build from the REPO ROOT (needs the pnpm workspace):
 #   docker build -f apps/web/Dockerfile -t vaporchain/web:latest .

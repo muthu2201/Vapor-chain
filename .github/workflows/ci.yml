@@ -1,65 +1,15 @@
-# Copyright (c) 2026 VaporChain / muthu2201. All rights reserved.
-# Proprietary. See LICENSE. Provenance: VAPOR-6eabb1be532bdef4
-name: CI
+# Copyright 2026 VaporChain / muthu2201. Licensed under Apache-2.0. Provenance: VAPOR-6eabb1be532bdef4
+name: SDK CI
 on:
   push:
-    branches: [main, "claude/**"]
   pull_request:
 permissions:
   contents: read
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
-
 jobs:
-  chain:
-    name: chain (go ${{ matrix.dir }})
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        dir: [chain, services/sponsor, services/indexer]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version: "1.26.8"
-          cache-dependency-path: ${{ matrix.dir }}/go.sum
-      - name: build
-        working-directory: ${{ matrix.dir }}
-        run: go build ./...
-      - name: vet
-        working-directory: ${{ matrix.dir }}
-        run: go vet ./...
-      - name: gofmt
-        working-directory: ${{ matrix.dir }}
-        run: test -z "$(gofmt -l $(git ls-files '*.go' | grep -v '\.pb\.go$'))"
-      - name: test
-        working-directory: ${{ matrix.dir }}
-        # the chain suite needs the EVM globals reset tag; services are plain
-        run: |
-          if [ "${{ matrix.dir }}" = "chain" ]; then go test -tags test -race ./...; else go test -race ./...; fi
-
-  contracts:
-    name: contracts (foundry)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with: { submodules: recursive }
-      - uses: foundry-rs/foundry-toolchain@v1
-        with: { version: "1.8.3" }
-      - name: build
-        working-directory: contracts
-        run: forge build --sizes
-      - name: lint
-        working-directory: contracts
-        run: forge lint --severity high src
-      - name: test
-        working-directory: contracts
-        run: forge test -vvv
-
-  frontend:
-    name: sdk + react + web
+  sdk:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -68,38 +18,21 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: "22", cache: "pnpm" }
       - run: pnpm install --frozen-lockfile
-      - name: generate ABIs (from committed artifacts if present)
-        run: pnpm gen:abis || echo "abis already generated"
-      - name: build packages
-        run: pnpm --filter @vaporchain/sdk build && pnpm --filter @vaporchain/react build
-      - name: typecheck
-        run: pnpm -r run typecheck
+      - run: pnpm --filter @vaporchain/sdk build && pnpm --filter @vaporchain/react build
+      - run: pnpm -r run typecheck
       - name: unit tests
-        run: pnpm -r --filter ./packages/** run test
-
-  secrets-scan:
-    name: no committed keys
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: scan for private keys and env files
         run: |
-          set -e
-          # fail if any real key material or local env slipped in
-          if git ls-files | grep -E '(^|/)\.env\.local$|\.key\.json$|/secrets/'; then
-            echo "::error::key material or .env.local is tracked"; exit 1
-          fi
-          # 64-hex private keys outside tests/fixtures/vendored deps
-          if git grep -nIE '\b(0x)?[0-9a-fA-F]{64}\b' -- ':!*_test.go' ':!*.t.sol' ':!**/test/**' ':!**/testdata/**' ':!contracts/lib/**' ':!**/deployments/**' ':!*.json' ':!docs/**' \
-             | grep -viE 'fingerprint|provenance|keccak|hash|salt|topic|commit|sha256|canary|VAPOR-'; then
-            echo "::error::possible hardcoded private key"; exit 1
-          fi
-          echo "clean"
-
-  provenance:
-    name: provenance watermark
+          pnpm --filter @vaporchain/sdk exec vitest run --dir test/unit
+          pnpm --filter @vaporchain/react exec vitest run --dir test/unit
+  contracts:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: verify provenance markers are intact
-        run: ./scripts/provenance/scan.sh --ci
+      - uses: foundry-rs/foundry-toolchain@v1
+        with: { version: "1.8.3" }
+      - name: install libs
+        working-directory: contracts
+        run: forge install OpenZeppelin/openzeppelin-contracts eth-infinitism/account-abstraction foundry-rs/forge-std
+      - name: build example contracts
+        working-directory: contracts
+        run: forge build

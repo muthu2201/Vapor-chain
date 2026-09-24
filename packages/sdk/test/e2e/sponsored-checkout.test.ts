@@ -1,4 +1,4 @@
-// Copyright (c) 2026 VaporChain / muthu2201. All rights reserved.
+// Copyright (c) 2026 VaporChain / muthu2201. Licensed under the Apache License, Version 2.0 (see LICENSE).
 // Provenance: VAPOR-6eabb1be532bdef4
 //
 // Golden-path E2E against a LIVE localnet + Alto bundler + sponsor service:

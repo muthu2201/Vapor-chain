@@ -1,98 +1,80 @@
-<!-- Copyright (c) 2026 VaporChain / muthu2201. All rights reserved. Provenance: VAPOR-6eabb1be532bdef4 -->
-# VaporChain
+<!-- Copyright 2026 VaporChain / muthu2201. Licensed under Apache-2.0. Provenance: VAPOR-6eabb1be532bdef4 -->
+# VaporChain SDK
 
-**A low-cost consumer EVM appchain where users pay in USDC with one signature and
-no gas token, and apps sponsor their users' gas out of earned revenue.**
+Build gasless, USDC-native apps on **VaporChain** — where users pay in USDC with
+one signature and no gas token, and your app sponsors their gas out of earned
+revenue.
 
-VaporChain is a Cosmos SDK chain (cosmos/evm) with native USDC settlement,
-ERC-4337 + EIP-7702 account abstraction, and an IBC path that brings USDC in from
-other chains. A first-time user with only USDC can check out in a single
-signature — no seed phrase, no gas token, instant finality.
+This is the **public developer distribution**: the TypeScript SDK, React hooks,
+a no-seed-phrase embedded wallet, developer-facing example contracts, and the
+guides you need to ship. Apache-2.0 licensed.
 
-> **Proprietary and confidential.** See [`LICENSE`](./LICENSE). This repository
-> is private; the SDK and docs are published separately. Not audited — see the
-> [threat model](./docs/security/threat-model.md).
+> The VaporChain protocol (the node and its modules) lives in a separate
+> repository and is proprietary. You do not need it to build on VaporChain — you
+> need this SDK and a network endpoint.
 
-## What's here
-
-| path | what |
-|---|---|
-| `chain/` | `vaporchaind` — the node: EVM, `x/settle`, `x/apps`, `x/council`, Settle precompile, sponsored lane, IBC |
-| `contracts/` | Foundry: EntryPoint v0.8 + Simple7702Account (canonical), paymasters, token factory, checkout |
-| `services/` | sponsor (ERC-7677), Alto bundler, indexer (Postgres + Parquet) |
-| `packages/sdk`, `packages/react` | TypeScript SDK and React hooks + embedded wallet |
-| `apps/web` | Next.js 16 reference app (shop, wallet, launchpad, dashboard) |
-| `deploy/` | Dockerfiles, docker-compose, systemd/Cosmovisor, Prometheus alerts |
-| `scripts/` | localnet, testnet genesis builder, provenance scan |
-| `docs/` | architecture, security, benchmarks, SDK guides |
-
-Start with **[ARCHITECTURE.md](./ARCHITECTURE.md)** — it explains *why* each piece
-is built the way it is.
-
-## Quick start (localnet)
-
-Requires Go 1.26.8, Foundry 1.8.3, Node 22 + pnpm 12, `jq`, `cast`, PostgreSQL.
+## Install
 
 ```bash
-# 1. build the node
-cd chain && make build && cd ..
-
-# 2. a 4-validator localnet with funded load accounts
-scripts/localnet/localnet.sh init 4 300
-scripts/localnet/localnet.sh start
-
-# 3. contracts + sponsor + bundler + indexer + Postgres
-scripts/localnet/services.sh up
-
-# 4. wire the reference app to it and run
-node apps/web/scripts/bootstrap-localnet.ts
-pnpm --filter @vaporchain/web dev      # http://localhost:3000
+pnpm add @vaporchain/sdk viem                        # core
+pnpm add @vaporchain/react @tanstack/react-query      # + React hooks
 ```
 
-Chain IDs: EVM mainnet **7797** / testnet **77970** / localnet **779700**;
-Cosmos `vaporchain-1` / `vapor-testnet-1` / `vapor-local-1`. Bech32 prefix
-`vapor`. Settle precompile `0x0000000000000000000000000000000000000900`.
-
-## Build a dapp
-
-```bash
-pnpm add @vaporchain/sdk @vaporchain/react viem @tanstack/react-query
-```
-
-See the [SDK guide](./docs/sdk/README.md) and
-[launch your token](./docs/sdk/launch-your-token.md). One-signature checkout:
+## One-signature, gasless checkout
 
 ```ts
+import { createVaporClient, vaporNetwork } from '@vaporchain/sdk'
+import { privateKeyToAccount } from 'viem/accounts'
+
+const client = createVaporClient({
+  network: vaporNetwork({ id: 77970, name: 'VaporChain Testnet', /* endpoints… */ }),
+  account: privateKeyToAccount('0x…'),
+  appId: 42n,                                   // your app sponsors the user's gas
+  contracts: { tokenFactory: '0x…', usdc: '0x…' },
+})
+
+// user holds USDC, zero gas credits → approveApp + payOrder in one sponsored UserOp
 await client.checkout({ checkout, orderId, token: usdc, amount: 10_000_000n })
 ```
 
-## Test
+## What's inside
+
+| path | what |
+|---|---|
+| `packages/sdk` | `@vaporchain/sdk` — viem-based client, settle calls, AA, token launch, bridging |
+| `packages/react` | `@vaporchain/react` — hooks + embedded wallet |
+| `apps/web` | Next.js 16 reference app (shop, wallet, launchpad, dashboard) |
+| `contracts/src` | developer contracts: `VaporCheckout`, `VaporToken(Factory)`, `ISettle`, examples |
+| `contracts/deployments` | deployed protocol addresses per chain id |
+| `docs/sdk` | [developer guide](./docs/sdk/README.md) · [launch your token](./docs/sdk/launch-your-token.md) |
+
+## Guides
+
+- **[SDK guide](./docs/sdk/README.md)** — connect, checkout, balances, quota,
+  embedded wallet, bridging, register your app.
+- **[Launch your token](./docs/sdk/launch-your-token.md)** — deploy an ERC-20 at a
+  predictable address, verify it, attribute it to your app, and (optionally) make
+  it a Settle asset or bridge it.
+
+## Develop
 
 ```bash
-cd chain && make test                       # Go, with the EVM reset tag
-cd contracts && forge test && forge lint src
-pnpm -r --filter ./packages/** run test     # SDK + React unit tests
-# live E2E (needs a running localnet):
-VAPOR_E2E_OWNER_KEY=0x… pnpm -r run test:e2e
+pnpm install
+pnpm --filter @vaporchain/sdk build && pnpm --filter @vaporchain/react build
+pnpm -r --filter ./packages/** run test        # unit tests
 ```
 
-CI (`.github/workflows/ci.yml`) runs all of the above plus a secret scan and the
-provenance check on every push.
+Example contracts compile with Foundry (solc 0.8.37, via_ir, prague). Install the
+libraries first:
 
-## Status
+```bash
+cd contracts
+forge install OpenZeppelin/openzeppelin-contracts eth-infinitism/account-abstraction
+forge build
+```
 
-Production-ready **testnet** engineering, pre-audit. Highlights:
+## License
 
-- Full one-signature USDC checkout proven end-to-end on a live chain (SDK +
-  React + Playwright browser E2E).
-- Stress-tested to a ~215 tps transfer knee with graceful backpressure; a
-  consensus liveness bug was found under load and fixed
-  ([results](./docs/benchmarks/results.md)).
-- Adversarial testing of the precompile, allowances, credits, sponsor policy,
-  paymaster and services ([red team](./docs/security/red-team.md)).
-
-## License & provenance
-
-Proprietary — [`LICENSE`](./LICENSE). Third-party components and their licenses:
-[`THIRD_PARTY_NOTICES.md`](./THIRD_PARTY_NOTICES.md), [`NOTICE`](./NOTICE).
-Authorship watermarks: `scripts/provenance/scan.sh`.
+Apache-2.0 — see [`LICENSE`](./LICENSE), [`NOTICE`](./NOTICE), and
+[`THIRD_PARTY_NOTICES.md`](./THIRD_PARTY_NOTICES.md). Files retain the
+`VAPOR-6eabb1be532bdef4` provenance watermark, which has no runtime effect.
