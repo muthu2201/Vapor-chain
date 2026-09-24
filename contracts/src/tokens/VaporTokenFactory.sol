@@ -50,13 +50,17 @@ contract VaporTokenFactory {
         allTokens.push(token);
         _byCreator[msg.sender].push(token);
         isFactoryToken[token] = true;
+        // the only external call is `new VaporToken`, whose constructor is our
+        // own code and makes no calls, so nothing can re-enter before this log
+        // forge-lint: disable-next-line(reentrancy-events)
         emit TokenCreated(token, msg.sender, p.owner, p.name, p.symbol, p.decimals, p.initialSupply, p.cap);
     }
 
     /// @notice Address a creator will get for (params, salt).
     function predictAddress(address creator, TokenParams calldata p, bytes32 salt) external view returns (address) {
+        // initcode = creationCode || abi.encode(constructor args), exactly what CREATE2 hashes
         bytes32 initHash = keccak256(
-            abi.encodePacked(
+            bytes.concat(
                 type(VaporToken).creationCode,
                 abi.encode(p.name, p.symbol, p.decimals, p.initialSupply, p.cap, p.owner, p.metadataURI)
             )

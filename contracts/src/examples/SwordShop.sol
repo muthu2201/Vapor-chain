@@ -27,8 +27,12 @@ contract SwordShop {
     }
 
     function buy(uint256 qty, address referrer) external {
+        // `net` is not needed: the game only records the fee it was charged
+        // forge-lint: disable-next-line(unused-return)
         (uint256 fee,) = SettleAddress.SETTLE.payFrom(msg.sender, usdc, PRICE * qty, treasuryOfGame, referrer);
         swords[msg.sender] += qty;
+        // SETTLE is native code moving bank coins; nothing re-enters here
+        // forge-lint: disable-next-line(reentrancy-events)
         emit SwordsBought(msg.sender, qty, fee);
     }
 }

@@ -4,10 +4,12 @@
   "port": 4337,
   "log-level": "info",
   "min-executor-balance": "1000000000000000000000",
-  "max-block-range": 2000,
+  "max-block-range": 1900,
   "eip-7702-support": true,
   "balance-override": true,
   "code-override-support": true,
   "deploy-simulations-contract": true,
-  "network-name": "vaporchain"
+  "network-name": "vaporchain",
+  "binary-search-gas-allowance": "3000000",
+  "binary-search-max-retries": 6
 }

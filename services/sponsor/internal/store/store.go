@@ -51,9 +51,9 @@ CREATE TABLE IF NOT EXISTS sponsor_cursor (
 type Store struct{ pool *pgxpool.Pool }
 
 var (
-	ErrQuotaExceeded  = errors.New("app sponsorship quota exhausted for this epoch")
-	ErrSenderCap      = errors.New("sender reached its daily sponsored-operation cap")
-	ErrAlreadySigned  = errors.New("this operation was already sponsored")
+	ErrQuotaExceeded = errors.New("app sponsorship quota exhausted for this epoch")
+	ErrSenderCap     = errors.New("sender reached its daily sponsored-operation cap")
+	ErrAlreadySigned = errors.New("this operation was already sponsored")
 )
 
 func Open(ctx context.Context, url string) (*Store, error) {

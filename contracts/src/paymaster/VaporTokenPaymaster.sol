@@ -102,6 +102,9 @@ contract VaporTokenPaymaster is VaporPaymasterBase {
         if (actual > maxCharge) actual = maxCharge;
         uint256 refund = maxCharge - actual;
         if (refund > 0) token.safeTransfer(sender, refund);
+        // `token` is the bank-backed USDC precompile: a transfer runs no EVM
+        // code at the recipient, so nothing can re-enter before this log.
+        // forge-lint: disable-next-line(reentrancy-events)
         emit GasPaidInToken(sender, actual, actualGasCost);
     }
 
@@ -112,6 +115,9 @@ contract VaporTokenPaymaster is VaporPaymasterBase {
         if (tokenAmount > bal) tokenAmount = bal;
         uint256 credits = SettleAddress.SETTLE.buyCredits(address(token), tokenAmount);
         entryPoint.depositTo{value: credits}(address(this));
+        // SETTLE is native code and depositTo only credits a balance; neither
+        // calls back into this contract.
+        // forge-lint: disable-next-line(reentrancy-events)
         emit Refilled(tokenAmount, credits);
     }
 

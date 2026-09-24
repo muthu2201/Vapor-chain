@@ -41,6 +41,9 @@ contract VaporCheckout {
         if (paidBy[orderId] != address(0)) revert AlreadyPaid(orderId);
         paidBy[orderId] = msg.sender;
         (fee, net) = SettleAddress.SETTLE.payFrom(msg.sender, token, amount, merchant, referrer);
+        // SETTLE is a precompile moving bank coins (x/settle rejects erc20/
+        // denoms), so no EVM code runs before this log; paidBy is set first.
+        // forge-lint: disable-next-line(reentrancy-events)
         emit OrderPaid(orderId, msg.sender, token, amount, fee, net, referrer);
     }
 

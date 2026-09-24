@@ -56,6 +56,7 @@ import (
 	vaporconfig "github.com/muthu2201/vapor-chain/chain/app/config"
 	"github.com/muthu2201/vapor-chain/chain/constants"
 	"github.com/muthu2201/vapor-chain/chain/provenance"
+	vaporrpc "github.com/muthu2201/vapor-chain/chain/rpc"
 )
 
 // NewRootCmd creates the vaporchaind root command.
@@ -114,7 +115,14 @@ func NewRootCmd() *cobra.Command {
 				return err
 			}
 			customAppTemplate, customAppConfig := vaporconfig.InitAppConfig(constants.LocalnetEVMChainID)
-			return sdkserver.InterceptConfigsPreRunHandler(cmd, customAppTemplate, customAppConfig, initCometConfig())
+			if err := sdkserver.InterceptConfigsPreRunHandler(cmd, customAppTemplate, customAppConfig, initCometConfig()); err != nil {
+				return err
+			}
+			// The eth_fillTransaction fix lives in the "vapor" namespace and
+			// must register after "eth"; enforce that whatever app.toml says.
+			v := sdkserver.GetServerContextFromCmd(cmd).Viper
+			v.Set(srvflags.JSONRPCAPI, vaporrpc.EnsureNamespaceOrder(v.GetStringSlice(srvflags.JSONRPCAPI)))
+			return nil
 		},
 	}
 

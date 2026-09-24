@@ -51,9 +51,11 @@ contract VaporVerifyingPaymaster is VaporPaymasterBase {
     event SignerProposed(address indexed signer, uint64 eta);
     event SignerChanged(address indexed previous, address indexed current);
     event DelegateAllowed(address indexed implementation, bool allowed);
+    event SignerRotationCancelled(address indexed signer);
 
     error SignerNotReady();
     error BadPaymasterData();
+    error ZeroSigner();
 
     constructor(
         IEntryPoint entryPoint_,
@@ -62,6 +64,8 @@ contract VaporVerifyingPaymaster is VaporPaymasterBase {
         address payable treasury_,
         address[] memory delegates
     ) VaporPaymasterBase(entryPoint_, owner_, treasury_) {
+        // a zero signer is a deploy mistake; use revokeSigner() to pause later
+        if (signer_ == address(0)) revert ZeroSigner();
         signer = signer_;
         emit SignerChanged(address(0), signer_);
         for (uint256 i = 0; i < delegates.length; i++) {
@@ -74,13 +78,26 @@ contract VaporVerifyingPaymaster is VaporPaymasterBase {
 
     /// @notice Start a timelocked signer rotation.
     function proposeSigner(address next) external onlyOwner {
+        if (next == address(0)) revert ZeroSigner();
         pendingSigner = next;
+        // casting to uint64 is safe: timestamps fit in uint64 for ~5.8e11 years
+        // forge-lint: disable-next-line(unsafe-typecast)
         pendingSignerEta = uint64(block.timestamp + SIGNER_ROTATION_DELAY);
         emit SignerProposed(next, pendingSignerEta);
     }
 
+    /// @notice Abort a pending rotation (e.g. one proposed by a leaked key).
+    function cancelSignerRotation() external onlyOwner {
+        emit SignerRotationCancelled(pendingSigner);
+        pendingSigner = address(0);
+        pendingSignerEta = 0;
+    }
+
     /// @notice Finalize a rotation once the timelock elapsed.
     function acceptSigner() external onlyOwner {
+        // CometBFT block time is the stake-weighted median of validator
+        // clocks, so one proposer cannot skew a 48h timelock meaningfully.
+        // forge-lint: disable-next-line(block-timestamp)
         if (pendingSigner == address(0) || block.timestamp < pendingSignerEta) revert SignerNotReady();
         emit SignerChanged(signer, pendingSigner);
         signer = pendingSigner;

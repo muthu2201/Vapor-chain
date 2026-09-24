@@ -33,11 +33,11 @@ type App struct {
 }
 
 type Quota struct {
-	Epoch      uint64
-	Gas        uint64
-	EpochEnds  int64
-	Diversity  uint32
-	UniqueEst  uint64
+	Epoch     uint64
+	Gas       uint64
+	EpochEnds int64
+	Diversity uint32
+	UniqueEst uint64
 }
 
 type Client struct {
@@ -45,10 +45,10 @@ type Client struct {
 	http *http.Client
 	eth  *ethclient.Client
 
-	mu        sync.Mutex
-	bindings  map[common.Address]cached[uint64] // contract -> app id (0 = none)
-	apps      map[uint64]cached[App]
-	cacheTTL  time.Duration
+	mu       sync.Mutex
+	bindings map[common.Address]cached[uint64] // contract -> app id (0 = none)
+	apps     map[uint64]cached[App]
+	cacheTTL time.Duration
 }
 
 type cached[T any] struct {

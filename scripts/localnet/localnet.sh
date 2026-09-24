@@ -200,7 +200,7 @@ cmd_start() {
   local count; count=$(ls -d "$NET_DIR"/node* 2>/dev/null | wc -l)
   for ((i = 0; i < count; i++)); do
     local h; h="$(home_of "$i")"
-    nohup "$BIN" start --home "$h" --chain-id "$CHAIN_ID" --json-rpc.api eth,net,web3,txpool,debug \
+    nohup "$BIN" start --home "$h" --chain-id "$CHAIN_ID" --json-rpc.api eth,net,web3,txpool,debug,vapor \
       >"$h/node.log" 2>&1 &
     echo $! >"$h/node.pid"
   done

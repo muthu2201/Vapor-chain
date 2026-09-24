@@ -17,6 +17,7 @@
 package policy
 
 import (
+	"bytes"
 	"context"
 	"encoding/binary"
 	"errors"
@@ -107,11 +108,10 @@ func (e *Engine) Evaluate(ctx context.Context, op *userop.UserOperation, entryPo
 	}
 
 	// account deployment
-	if f := op.Factory; f != nil && *f != (common.Address{}) {
-		// 0x7702 marker = EntryPoint-managed 7702 init, not a factory
-		if *f != common.HexToAddress("0x7702") && !e.cfg.AllowedFactories[*f] {
-			return Decision{}, deny("factory %s is not allowlisted", f)
-		}
+	// (the 0x7702 marker is EntryPoint-managed 7702 init, not a factory; the
+	// delegate it installs is checked below)
+	if f, ok := op.Factory.Address(); ok && !e.cfg.AllowedFactories[f] {
+		return Decision{}, deny("factory %s is not allowlisted", f)
 	}
 
 	// EIP-7702 delegation policy
@@ -119,8 +119,12 @@ func (e *Engine) Evaluate(ctx context.Context, op *userop.UserOperation, entryPo
 	if err != nil {
 		return Decision{}, err
 	}
-	if impl, ok := chain.Delegation(code); ok && !e.cfg.AllowedDelegates[impl] {
+	impl, delegated := chain.Delegation(code)
+	if delegated && !e.cfg.AllowedDelegates[impl] {
 		return Decision{}, deny("sender delegates to non-allowlisted implementation %s", impl)
+	}
+	if op.Factory.IsEIP7702() && len(op.EIP7702Auth) == 0 && !delegated {
+		return Decision{}, deny("0x7702 marker without an eip7702Auth or an existing delegation")
 	}
 	if len(op.EIP7702Auth) > 0 {
 		var auth struct {
@@ -147,7 +151,11 @@ func (e *Engine) Evaluate(ctx context.Context, op *userop.UserOperation, entryPo
 			if len(c.Data) < 4+32 || string(c.Data[:4]) != string(approveAppSelector) {
 				return Decision{}, deny("only SETTLE.approveApp may be called directly in a sponsored op")
 			}
-			if binary.BigEndian.Uint64(c.Data[4+24:4+32]) != appID {
+			// the whole ABI word must equal appID: dirty high bytes would make
+			// the on-chain decoder revert and burn sponsored gas
+			var want [32]byte
+			binary.BigEndian.PutUint64(want[24:], appID)
+			if !bytes.Equal(c.Data[4:4+32], want[:]) {
 				return Decision{}, deny("SETTLE.approveApp must target the sponsoring app")
 			}
 			continue

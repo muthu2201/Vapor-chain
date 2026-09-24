@@ -56,6 +56,9 @@ func InitAppConfig(evmChainID uint64) (string, interface{}) {
 	// eth_getLogs range cap protects public RPC from scraping DoS.
 	rpcCfg.BlockRangeCap = 2000
 	rpcCfg.LogsCap = 10000
+	// "vapor" carries the eth_fillTransaction fix and vapor_* metadata
+	// (see chain/rpc); the root command also forces it on after "eth".
+	rpcCfg.API = []string{"eth", "net", "web3", "vapor"}
 
 	custom := AppConfig{
 		Config:     *srvCfg,

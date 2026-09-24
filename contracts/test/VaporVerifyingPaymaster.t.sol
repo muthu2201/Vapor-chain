@@ -174,6 +174,28 @@ contract VaporVerifyingPaymasterTest is Test {
         assertEq(pm.signer(), next.addr);
     }
 
+    function test_ZeroSignerRejectedAndRotationCancellable() public {
+        address[] memory none = new address[](0);
+        vm.expectRevert(VaporVerifyingPaymaster.ZeroSigner.selector);
+        new VaporVerifyingPaymaster(IEntryPoint(CANONICAL_EP), pmOwner, address(0), treasury, none);
+
+        vm.startPrank(pmOwner);
+        vm.expectRevert(VaporVerifyingPaymaster.ZeroSigner.selector);
+        pm.proposeSigner(address(0));
+
+        // a rotation started by a leaked key can be aborted before it lands
+        pm.proposeSigner(makeAddr("rogue"));
+        pm.cancelSignerRotation();
+        vm.warp(block.timestamp + 48 hours);
+        vm.expectRevert(VaporVerifyingPaymaster.SignerNotReady.selector);
+        pm.acceptSigner();
+        vm.stopPrank();
+        assertEq(pm.signer(), signerW.addr);
+
+        vm.expectRevert();
+        pm.cancelSignerRotation(); // not owner
+    }
+
     function test_OnlyOwnerAdmin() public {
         vm.expectRevert();
         pm.revokeSigner();

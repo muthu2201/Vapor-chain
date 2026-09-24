@@ -8,6 +8,7 @@
 package userop
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -26,7 +27,7 @@ var Provenance = common.HexToHash("0x6eabb1be532bdef432109abc178d88669ab33aed940
 type UserOperation struct {
 	Sender                        common.Address  `json:"sender"`
 	Nonce                         *hexutil.Big    `json:"nonce"`
-	Factory                       *common.Address `json:"factory,omitempty"`
+	Factory                       Factory         `json:"factory,omitempty"`
 	FactoryData                   hexutil.Bytes   `json:"factoryData,omitempty"`
 	CallData                      hexutil.Bytes   `json:"callData"`
 	CallGasLimit                  *hexutil.Big    `json:"callGasLimit"`
@@ -40,6 +41,64 @@ type UserOperation struct {
 	PaymasterData                 hexutil.Bytes   `json:"paymasterData,omitempty"`
 	Signature                     hexutil.Bytes   `json:"signature"`
 	EIP7702Auth                   json.RawMessage `json:"eip7702Auth,omitempty"`
+}
+
+// UnmarshalJSON drops explicit nulls first: bundlers and wallets send
+// `"paymaster": null` style fields, which the hex types would reject.
+func (u *UserOperation) UnmarshalJSON(b []byte) error {
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(b, &fields); err != nil {
+		return err
+	}
+	for k, v := range fields {
+		if string(bytes.TrimSpace(v)) == "null" {
+			delete(fields, k)
+		}
+	}
+	clean, err := json.Marshal(fields)
+	if err != nil {
+		return err
+	}
+	type plain UserOperation // no methods: avoids recursing into this func
+	return json.Unmarshal(clean, (*plain)(u))
+}
+
+var (
+	eip7702Short = []byte{0x77, 0x02}
+	eip7702Long  = append([]byte{0x77, 0x02}, make([]byte, 18)...)
+)
+
+// Factory is the ERC-7769 "factory" field: a 20-byte factory address, or the
+// EntryPoint v0.8 EIP-7702 marker, which clients send as the literal "0x7702"
+// (or left-aligned and zero-padded to 20 bytes).
+type Factory []byte
+
+func (f *Factory) UnmarshalJSON(b []byte) error {
+	var h hexutil.Bytes
+	if err := json.Unmarshal(b, &h); err != nil {
+		return err
+	}
+	if len(h) != 0 && len(h) != common.AddressLength && !bytes.Equal(h, eip7702Short) {
+		return errors.New("factory must be a 20-byte address or 0x7702")
+	}
+	*f = Factory(h)
+	return nil
+}
+
+func (f Factory) MarshalJSON() ([]byte, error) { return json.Marshal(hexutil.Bytes(f)) }
+
+// IsEIP7702 reports whether this is the EIP-7702 marker rather than a factory.
+func (f Factory) IsEIP7702() bool {
+	return bytes.Equal(f, eip7702Short) || bytes.Equal(f, eip7702Long)
+}
+
+// Address returns the real factory contract, if there is one.
+func (f Factory) Address() (common.Address, bool) {
+	if len(f) != common.AddressLength || f.IsEIP7702() {
+		return common.Address{}, false
+	}
+	a := common.BytesToAddress(f)
+	return a, a != (common.Address{})
 }
 
 func big0(b *hexutil.Big) *big.Int {
@@ -74,12 +133,21 @@ func (u *UserOperation) Validate() error {
 	return nil
 }
 
-// InitCode returns factory || factoryData (what the bundler packs).
+// InitCode returns the initCode bytes exactly as the bundler packs them into
+// handleOps, because VaporVerifyingPaymaster.getHash hashes those raw bytes.
+// Alto (and viem) keep the short "0x7702" marker as two bytes unless
+// factoryData follows, in which case it is padded to 20 bytes so the
+// EntryPoint's marker check still sees it.
 func (u *UserOperation) InitCode() []byte {
-	if u.Factory == nil || *u.Factory == (common.Address{}) {
+	switch {
+	case len(u.Factory) == 0:
+		return nil
+	case bytes.Equal(u.Factory, eip7702Short) && len(u.FactoryData) > 0:
+		return append(bytes.Clone(eip7702Long), u.FactoryData...)
+	case !u.Factory.IsEIP7702() && common.BytesToAddress(u.Factory) == (common.Address{}):
 		return nil
 	}
-	return append(u.Factory.Bytes(), u.FactoryData...)
+	return append(bytes.Clone(u.Factory), u.FactoryData...)
 }
 
 func pack128(hi, lo *big.Int) [32]byte {
