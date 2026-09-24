@@ -25,6 +25,7 @@ import (
 	"context"
 
 	"github.com/ethereum/go-ethereum/common"
+	ethtypes "github.com/ethereum/go-ethereum/core/types"
 
 	abci "github.com/cometbft/cometbft/abci/types"
 	cmttypes "github.com/cometbft/cometbft/types"
@@ -41,7 +42,17 @@ type Policy interface {
 	SponsoredLane(ctx sdk.Context) (map[common.Address]struct{}, uint32)
 }
 
-// IsSponsored classifies a decoded tx.
+// IsSponsored classifies a tx by recovering the Ethereum signer from its
+// signature and testing membership in the sponsored-sender set.
+//
+// It recovers the signer rather than trusting MsgEthereumTx.From, because From
+// is only populated after the ante handler runs signature verification. In
+// PrepareProposal the mempool's txs already carry From (set at CheckTx), but in
+// ProcessProposal a freshly decoded tx has an EMPTY From, so a From-based check
+// would silently classify every tx as non-sponsored and never enforce the cap.
+// Signature recovery is deterministic and unspoofable: a tx counts as sponsored
+// only if a sponsored sender actually signed it, so a malicious proposer can
+// neither hide sponsored gas under the cap nor forge extra headroom.
 func IsSponsored(tx sdk.Tx, senders map[common.Address]struct{}) bool {
 	if len(senders) == 0 || tx == nil {
 		return false
@@ -54,7 +65,17 @@ func IsSponsored(tx sdk.Tx, senders map[common.Address]struct{}) bool {
 	if !ok {
 		return false
 	}
-	_, ok = senders[common.BytesToAddress(eth.From)]
+	// Fast path: From already recovered (mempool txs verified at CheckTx).
+	if len(eth.From) == 20 {
+		_, ok = senders[common.BytesToAddress(eth.From)]
+		return ok
+	}
+	ethTx := eth.AsTransaction()
+	from, err := ethtypes.Sender(ethtypes.LatestSignerForChainID(ethTx.ChainId()), ethTx)
+	if err != nil {
+		return false
+	}
+	_, ok = senders[from]
 	return ok
 }
 
@@ -130,7 +151,16 @@ func (s *Selector) SelectTxForProposal(ctx context.Context, maxTxBytes, maxBlock
 	return s.totalTxBytes >= maxTxBytes || (maxBlockGas > 0 && s.totalTxGas >= maxBlockGas)
 }
 
-// ProcessProposalHandler wraps the default handler with the lane-cap check.
+// ProcessProposalHandler wraps the inner handler and REJECTS a proposal only
+// when the sponsored lane exceeds its cap. It does NOT re-run the ante handler:
+// per-tx validity (nonces, balances, signatures) is enforced at CheckTx (block
+// entry) and again deterministically in FinalizeBlock, where an invalid tx is
+// recorded as a failed tx — it never halts the chain. Re-validating here with a
+// full ante caused a liveness halt, because PrepareProposal (which builds the
+// block from the EVM mempool) and a linear ante replay in ProcessProposal do
+// not agree on the exact validity of every tx under load. The lane cap is a
+// consensus POLICY a proposer could violate maliciously, so it is the one thing
+// that must be checked on every validator.
 func ProcessProposalHandler(inner sdk.ProcessProposalHandler, decode sdk.TxDecoder, p Policy) sdk.ProcessProposalHandler {
 	return func(ctx sdk.Context, req *abci.RequestProcessProposal) (*abci.ResponseProcessProposal, error) {
 		resp, err := inner(ctx, req)
@@ -153,7 +183,9 @@ func ProcessProposalHandler(inner sdk.ProcessProposalHandler, decode sdk.TxDecod
 		for _, bz := range req.Txs {
 			tx, err := decode(bz)
 			if err != nil {
-				return &abci.ResponseProcessProposal{Status: abci.ResponseProcessProposal_REJECT}, nil
+				// Not a decodable SDK tx, hence not a sponsored MsgEthereumTx.
+				// Its validity is FinalizeBlock's problem, not ours.
+				continue
 			}
 			if IsSponsored(tx, senders) {
 				sponsored += txGas(tx)

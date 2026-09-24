@@ -9,7 +9,11 @@ import (
 	"errors"
 	"testing"
 
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/common"
+	ethtypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/stretchr/testify/require"
 	protov2 "google.golang.org/protobuf/proto"
 
@@ -80,6 +84,35 @@ func TestIsSponsored(t *testing.T) {
 	require.False(t, IsSponsored(ethTx(bundler, 1), nil))
 }
 
+// TestIsSponsoredRecoversSignerWhenFromEmpty is the ProcessProposal case: a
+// freshly decoded MsgEthereumTx has an EMPTY From, so classification must fall
+// back to recovering the signer from the signature. A From-based check would
+// silently treat every such tx as non-sponsored and never enforce the cap.
+func TestIsSponsoredRecoversSignerWhenFromEmpty(t *testing.T) {
+	key, err := crypto.GenerateKey()
+	require.NoError(t, err)
+	signerAddr := crypto.PubkeyToAddress(key.PublicKey)
+	chainID := big.NewInt(779700)
+	ethSigner := ethtypes.LatestSignerForChainID(chainID)
+
+	freshMsg := func() *evmtypes.MsgEthereumTx {
+		tx := ethtypes.MustSignNewTx(key, ethSigner, &ethtypes.LegacyTx{
+			Nonce: 0, To: &bundler, Value: big.NewInt(0), Gas: 21000, GasPrice: big.NewInt(1e9),
+		})
+		msg := &evmtypes.MsgEthereumTx{}
+		msg.FromEthereumTx(tx)
+		msg.From = nil // a decoded-but-not-yet-ante'd tx has no From
+		return msg
+	}
+
+	m := freshMsg()
+	require.Empty(t, m.From, "precondition: From must be empty")
+	require.True(t, IsSponsored(fakeTx{msgs: []sdk.Msg{m}, gas: 21000}, map[common.Address]struct{}{signerAddr: {}}),
+		"must recover the signer and classify as sponsored")
+	require.False(t, IsSponsored(fakeTx{msgs: []sdk.Msg{freshMsg()}, gas: 21000}, map[common.Address]struct{}{bundler: {}}),
+		"a signer outside the set is not sponsored")
+}
+
 func TestCapMath(t *testing.T) {
 	require.Equal(t, uint64(20_000_000), Cap(40_000_000, 5_000))
 	require.Equal(t, uint64(0), Cap(0, 5_000))
@@ -126,8 +159,22 @@ func TestProcessProposalRejectsMaliciousProposer(t *testing.T) {
 	r, err = h(ctx, &abci.RequestProcessProposal{Txs: malicious})
 	require.NoError(t, err)
 	require.Equal(t, abci.ResponseProcessProposal_REJECT, r.Status)
-	// undecodable tx bytes are rejected too
+
+	// The lane wrapper is not a validity checker: an undecodable tx is skipped
+	// (it cannot be a sponsored MsgEthereumTx), so the wrapper ACCEPTs. Per-tx
+	// validity belongs to the inner handler and FinalizeBlock — re-checking it
+	// here is what previously halted the chain (STRESS-HALT).
 	r, err = h(ctx, &abci.RequestProcessProposal{Txs: [][]byte{{0xde, 0xad}}})
+	require.NoError(t, err)
+	require.Equal(t, abci.ResponseProcessProposal_ACCEPT, r.Status)
+
+	// If the INNER handler rejects (e.g. its decoder fails on the bytes), the
+	// wrapper propagates that rejection unchanged.
+	rejectInner := func(sdk.Context, *abci.RequestProcessProposal) (*abci.ResponseProcessProposal, error) {
+		return &abci.ResponseProcessProposal{Status: abci.ResponseProcessProposal_REJECT}, nil
+	}
+	hr := ProcessProposalHandler(rejectInner, dec, policy{bps: 5_000})
+	r, err = hr(ctx, &abci.RequestProcessProposal{Txs: honest})
 	require.NoError(t, err)
 	require.Equal(t, abci.ResponseProcessProposal_REJECT, r.Status)
 }

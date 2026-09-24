@@ -1,0 +1,104 @@
+# Copyright (c) 2026 VaporChain / muthu2201. All rights reserved.
+# Proprietary. See LICENSE. Provenance: VAPOR-6eabb1be532bdef4
+#
+# Prometheus alert rules for a VaporChain node and its off-chain services.
+# Node metrics come from CometBFT (:26660) with the `tendermint_` prefix;
+# service metrics from vapor-sponsor (:9800) and vapor-indexer (:9900).
+groups:
+  - name: vaporchain-consensus
+    rules:
+      - alert: NodeDown
+        expr: up{job=~"vaporchain.*"} == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "{{ $labels.instance }} is down"
+          description: "Prometheus cannot scrape {{ $labels.job }} on {{ $labels.instance }} for 2m."
+      - alert: BlockProductionStalled
+        # height must advance; flat for 1m means the chain (or this node) is stuck
+        expr: increase(tendermint_consensus_height[2m]) == 0
+        for: 1m
+        labels: { severity: critical }
+        annotations:
+          summary: "No blocks on {{ $labels.instance }}"
+          description: "consensus_height has not increased in 2m."
+      - alert: ValidatorMissingBlocks
+        expr: increase(tendermint_consensus_validator_missed_blocks[5m]) > 5
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "Validator missing blocks"
+          description: "{{ $value }} missed precommits in 5m — approaching downtime jail."
+      - alert: TooFewValidators
+        # PoA safety: 4 validators tolerate 1 fault; alert before the second
+        expr: tendermint_consensus_validators < 3
+        for: 1m
+        labels: { severity: critical }
+        annotations:
+          summary: "Active validator set below fault tolerance"
+      - alert: BlockTimeSlow
+        expr: rate(tendermint_consensus_block_interval_seconds_sum[5m]) / rate(tendermint_consensus_block_interval_seconds_count[5m]) > 3
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "Mean block time > 3s"
+
+  - name: vaporchain-mempool
+    rules:
+      - alert: MempoolBacklog
+        expr: tendermint_mempool_size > 5000
+        for: 3m
+        labels: { severity: warning }
+        annotations:
+          summary: "Mempool backlog {{ $value }}"
+          description: "Sustained backlog: raise block gas, add capacity, or investigate spam."
+
+  - name: vaporchain-sponsor
+    rules:
+      - alert: SponsorDown
+        expr: up{job="vapor-sponsor"} == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations: { summary: "Sponsor service down (gasless UX broken)" }
+      - alert: SponsorErrorRate
+        expr: |
+          sum(rate(vapor_sponsor_requests_total{outcome="error"}[5m]))
+            / clamp_min(sum(rate(vapor_sponsor_requests_total[5m])), 1) > 0.2
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "Sponsor error rate > 20%"
+          description: "Policy denials or upstream chain-query failures; check paymaster deposit and REST."
+      - alert: SponsorLatencyHigh
+        expr: histogram_quantile(0.99, sum(rate(vapor_sponsor_latency_seconds_bucket[5m])) by (le)) > 2
+        for: 10m
+        labels: { severity: warning }
+        annotations: { summary: "Sponsor p99 latency > 2s" }
+
+  - name: vaporchain-indexer
+    rules:
+      - alert: IndexerDown
+        expr: up{job="vapor-indexer"} == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations: { summary: "Indexer down (explorer/dashboards stale)" }
+      - alert: IndexerLagHigh
+        expr: vapor_indexer_lag_blocks > 200
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "Indexer {{ $value }} blocks behind head"
+      - alert: IndexerNotAdvancing
+        expr: increase(vapor_indexer_height[5m]) == 0
+        for: 5m
+        labels: { severity: critical }
+        annotations: { summary: "Indexer height not advancing" }
+      - alert: RetentionMarginLow
+        # CometBFT v0.39 has no data companion; the indexer exports how many
+        # blocks of head-room remain before pruning would drop un-indexed data
+        expr: vapor_indexer_retention_margin_blocks < 1000
+        for: 5m
+        labels: { severity: critical }
+        annotations:
+          summary: "Indexer within {{ $value }} blocks of the node's pruning window"
+          description: "Point the indexer at a history node or slow pruning, or archival data will be lost."

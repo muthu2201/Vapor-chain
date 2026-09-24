@@ -1,0 +1,31 @@
+{
+  "scenario": "sponsored",
+  "duration_sec": 30.258712526,
+  "target_rate_tps": 200,
+  "sent": 5985,
+  "accepted_by_mempool": 5985,
+  "rejected_by_mempool": 0,
+  "reject_reasons": {},
+  "included_onchain": 5875,
+  "reverted_onchain": 0,
+  "inclusion_rate": 0.9816207184628237,
+  "onchain_tps": 187.9476000527329,
+  "latency_ms": {
+    "max": 45283,
+    "p50": 1555,
+    "p95": 40765,
+    "p99": 44523
+  },
+  "blocks_observed": 74,
+  "block_time_ms": {
+    "max": 1190,
+    "p50": 1007,
+    "p95": 1111
+  },
+  "max_tx_per_block": 161,
+  "block_gas_utilization": {
+    "max": 0.313525,
+    "p50": 0.25
+  },
+  "max_sponsored_gas_share": 0.5
+}

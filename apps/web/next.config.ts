@@ -12,8 +12,10 @@ const security = [
 ]
 
 const nextConfig: NextConfig = {
+  output: 'standalone',
   poweredByHeader: false,
   reactStrictMode: true,
+  outputFileTracingRoot: new URL('../../', import.meta.url).pathname,
   // workspace packages ship ESM TypeScript builds
   transpilePackages: ['@vaporchain/sdk', '@vaporchain/react'],
   async headers() {

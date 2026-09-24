@@ -1,0 +1,34 @@
+{
+  "scenario": "transfer",
+  "duration_sec": 31.792612206,
+  "target_rate_tps": 1400,
+  "sent": 24145,
+  "accepted_by_mempool": 17162,
+  "rejected_by_mempool": 6983,
+  "reject_reasons": {
+    "already known": 1791,
+    "transaction underpriced": 5192
+  },
+  "included_onchain": 5478,
+  "reverted_onchain": 0,
+  "inclusion_rate": 0.319193567183312,
+  "onchain_tps": 167.04982102638658,
+  "latency_ms": {
+    "max": 37036,
+    "p50": 28957,
+    "p95": 33797,
+    "p99": 35453
+  },
+  "blocks_observed": 42,
+  "block_time_ms": {
+    "max": 21958,
+    "p50": 1006,
+    "p95": 3235
+  },
+  "max_tx_per_block": 1904,
+  "block_gas_utilization": {
+    "max": 0.9996,
+    "p50": 0
+  },
+  "max_sponsored_gas_share": 0
+}

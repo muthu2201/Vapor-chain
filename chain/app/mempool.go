@@ -61,7 +61,11 @@ func (app *VaporApp) configureEVMMempool(appOpts servertypes.AppOptions, logger 
 	app.EVMMempool = mempool
 
 	policy := lanePolicy{app: app}
-	proposalHandler := baseapp.NewDefaultProposalHandler(mempool, NewNoCheckProposalTxVerifier(app.BaseApp))
+	// Prepare and Process MUST agree on block validity or consensus halts.
+	// LaneProposalTxVerifier skips ante in both (validity is FinalizeBlock's
+	// job; the sponsored-lane cap is enforced separately in ProcessProposal by
+	// recovering each tx's signer). See tx_verifier.go for the full rationale.
+	proposalHandler := baseapp.NewDefaultProposalHandler(mempool, NewLaneProposalTxVerifier(app.BaseApp))
 	proposalHandler.SetTxSelector(lane.NewSelector(policy))
 
 	app.SetPrepareProposal(proposalHandler.PrepareProposalHandler())
