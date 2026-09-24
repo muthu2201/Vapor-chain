@@ -1,0 +1,148 @@
+syntax = "proto3";
+package vaporchain.apps.v1;
+
+import "gogoproto/gogo.proto";
+import "cosmos_proto/cosmos.proto";
+import "cosmos/msg/v1/msg.proto";
+import "amino/amino.proto";
+import "vaporchain/apps/v1/apps.proto";
+
+option go_package = "github.com/muthu2201/vapor-chain/chain/x/apps/types";
+
+// Msg defines the x/apps Msg service.
+service Msg {
+  option (cosmos.msg.v1.service) = true;
+  rpc RegisterApp(MsgRegisterApp) returns (MsgRegisterAppResponse);
+  rpc UpdateApp(MsgUpdateApp) returns (MsgUpdateAppResponse);
+  rpc TransferOwnership(MsgTransferOwnership) returns (MsgTransferOwnershipResponse);
+  rpc AcceptOwnership(MsgAcceptOwnership) returns (MsgAcceptOwnershipResponse);
+  rpc AddContract(MsgAddContract) returns (MsgAddContractResponse);
+  rpc AcceptContractClaim(MsgAcceptContractClaim) returns (MsgAcceptContractClaimResponse);
+  rpc RemoveContract(MsgRemoveContract) returns (MsgRemoveContractResponse);
+  rpc CancelContractMove(MsgCancelContractMove) returns (MsgCancelContractMoveResponse);
+  rpc AttestDomain(MsgAttestDomain) returns (MsgAttestDomainResponse);
+  rpc SetAppStatus(MsgSetAppStatus) returns (MsgSetAppStatusResponse);
+  rpc UpdateParams(MsgUpdateParams) returns (MsgUpdateParamsResponse);
+}
+
+message MsgRegisterApp {
+  option (cosmos.msg.v1.signer) = "owner";
+  option (amino.name) = "vapor/apps/MsgRegisterApp";
+  string owner = 1 [ (cosmos_proto.scalar) = "cosmos.AddressString" ];
+  string revenue_recipient = 2 [ (cosmos_proto.scalar) = "cosmos.AddressString" ];
+  string metadata_uri = 3;
+  string domain = 4;
+  uint32 referrer_bps = 5;
+}
+message MsgRegisterAppResponse { uint64 app_id = 1; }
+
+// MsgUpdateApp replaces the mutable fields of an app (owner only).
+message MsgUpdateApp {
+  option (cosmos.msg.v1.signer) = "owner";
+  option (amino.name) = "vapor/apps/MsgUpdateApp";
+  string owner = 1 [ (cosmos_proto.scalar) = "cosmos.AddressString" ];
+  uint64 app_id = 2;
+  string revenue_recipient = 3 [ (cosmos_proto.scalar) = "cosmos.AddressString" ];
+  string metadata_uri = 4;
+  string domain = 5;
+  uint32 referrer_bps = 6;
+}
+message MsgUpdateAppResponse {}
+
+message MsgTransferOwnership {
+  option (cosmos.msg.v1.signer) = "owner";
+  option (amino.name) = "vapor/apps/MsgTransferOwnership";
+  string owner = 1 [ (cosmos_proto.scalar) = "cosmos.AddressString" ];
+  uint64 app_id = 2;
+  string new_owner = 3 [ (cosmos_proto.scalar) = "cosmos.AddressString" ];
+}
+message MsgTransferOwnershipResponse {}
+
+message MsgAcceptOwnership {
+  option (cosmos.msg.v1.signer) = "new_owner";
+  option (amino.name) = "vapor/apps/MsgAcceptOwnership";
+  string new_owner = 1 [ (cosmos_proto.scalar) = "cosmos.AddressString" ];
+  uint64 app_id = 2;
+}
+message MsgAcceptOwnershipResponse {}
+
+// OwnershipProof carries the data needed to verify contract ownership.
+message OwnershipProof {
+  ProofType type = 1;
+  // nonce used by the signer for CREATE.
+  uint64 nonce = 2;
+  // salt (32 bytes hex) and init_code_hash (32 bytes hex) for CREATE2.
+  string salt = 3;
+  string init_code_hash = 4;
+}
+
+message MsgAddContract {
+  option (cosmos.msg.v1.signer) = "owner";
+  option (amino.name) = "vapor/apps/MsgAddContract";
+  string owner = 1 [ (cosmos_proto.scalar) = "cosmos.AddressString" ];
+  uint64 app_id = 2;
+  string contract = 3;
+  OwnershipProof proof = 4 [ (gogoproto.nullable) = false ];
+}
+message MsgAddContractResponse {
+  // pending is true when the contract belonged to another app and the move
+  // is timelocked until unlock_height.
+  bool pending = 1;
+  int64 unlock_height = 2;
+}
+
+message MsgAcceptContractClaim {
+  option (cosmos.msg.v1.signer) = "owner";
+  option (amino.name) = "vapor/apps/MsgAcceptContractClaim";
+  string owner = 1 [ (cosmos_proto.scalar) = "cosmos.AddressString" ];
+  uint64 app_id = 2;
+  string contract = 3;
+}
+message MsgAcceptContractClaimResponse {
+  bool pending = 1;
+  int64 unlock_height = 2;
+}
+
+message MsgRemoveContract {
+  option (cosmos.msg.v1.signer) = "owner";
+  option (amino.name) = "vapor/apps/MsgRemoveContract";
+  string owner = 1 [ (cosmos_proto.scalar) = "cosmos.AddressString" ];
+  uint64 app_id = 2;
+  string contract = 3;
+}
+message MsgRemoveContractResponse {}
+
+// MsgCancelContractMove lets the CURRENT app owner veto a pending move.
+message MsgCancelContractMove {
+  option (cosmos.msg.v1.signer) = "owner";
+  option (amino.name) = "vapor/apps/MsgCancelContractMove";
+  string owner = 1 [ (cosmos_proto.scalar) = "cosmos.AddressString" ];
+  string contract = 2;
+}
+message MsgCancelContractMoveResponse {}
+
+message MsgAttestDomain {
+  option (cosmos.msg.v1.signer) = "attestor";
+  option (amino.name) = "vapor/apps/MsgAttestDomain";
+  string attestor = 1 [ (cosmos_proto.scalar) = "cosmos.AddressString" ];
+  uint64 app_id = 2;
+  string domain = 3;
+}
+message MsgAttestDomainResponse { bool verified = 1; }
+
+message MsgSetAppStatus {
+  option (cosmos.msg.v1.signer) = "authority";
+  option (amino.name) = "vapor/apps/MsgSetAppStatus";
+  string authority = 1 [ (cosmos_proto.scalar) = "cosmos.AddressString" ];
+  uint64 app_id = 2;
+  AppStatus status = 3;
+}
+message MsgSetAppStatusResponse {}
+
+message MsgUpdateParams {
+  option (cosmos.msg.v1.signer) = "authority";
+  option (amino.name) = "vapor/apps/MsgUpdateParams";
+  string authority = 1 [ (cosmos_proto.scalar) = "cosmos.AddressString" ];
+  Params params = 2 [ (gogoproto.nullable) = false, (amino.dont_omitempty) = true ];
+}
+message MsgUpdateParamsResponse {}

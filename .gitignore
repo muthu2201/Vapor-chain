@@ -1,0 +1,28 @@
+# build outputs
+chain/build/
+tools/*/bin/
+services/*/bin/
+contracts/out/
+contracts/cache/
+contracts/broadcast/*/779700/
+node_modules/
+.next/
+dist/
+*.tsbuildinfo
+coverage/
+
+# local networks & secrets (NEVER commit keys)
+.localnet/
+.localnet-accounts.json
+.testnet/
+*.key.json
+*.pem
+.env
+.env.*
+!.env.example
+
+# editors / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp

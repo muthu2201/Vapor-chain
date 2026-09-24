@@ -1,0 +1,108 @@
+syntax = "proto3";
+package vaporchain.settle.v1;
+
+import "gogoproto/gogo.proto";
+import "cosmos_proto/cosmos.proto";
+import "cosmos/msg/v1/msg.proto";
+import "cosmos/base/v1beta1/coin.proto";
+import "amino/amino.proto";
+import "vaporchain/settle/v1/settle.proto";
+
+option go_package = "github.com/muthu2201/vapor-chain/chain/x/settle/types";
+
+// Msg defines the x/settle Msg service. Contract-originated payments go
+// through the Settle precompile; these messages serve Cosmos wallets,
+// treasury operations and governance.
+service Msg {
+  option (cosmos.msg.v1.service) = true;
+  // Pay from a Cosmos account. Always attributed to the no-app bucket
+  // because a plain account cannot prove it is an app.
+  rpc Pay(MsgPay) returns (MsgPayResponse);
+  rpc ClaimRevenue(MsgClaimRevenue) returns (MsgClaimRevenueResponse);
+  rpc BuyCredits(MsgBuyCredits) returns (MsgBuyCreditsResponse);
+  rpc CloseTab(MsgCloseTab) returns (MsgCloseTabResponse);
+  rpc WithdrawTreasury(MsgWithdrawTreasury) returns (MsgWithdrawTreasuryResponse);
+  rpc DisburseRelayerPool(MsgDisburseRelayerPool) returns (MsgDisburseRelayerPoolResponse);
+  rpc UpdateParams(MsgUpdateParams) returns (MsgUpdateParamsResponse);
+}
+
+message MsgPay {
+  option (cosmos.msg.v1.signer) = "payer";
+  option (amino.name) = "vapor/settle/MsgPay";
+  string payer = 1 [ (cosmos_proto.scalar) = "cosmos.AddressString" ];
+  string payee = 2 [ (cosmos_proto.scalar) = "cosmos.AddressString" ];
+  cosmos.base.v1beta1.Coin amount = 3 [ (gogoproto.nullable) = false ];
+}
+message MsgPayResponse {
+  cosmos.base.v1beta1.Coin fee = 1 [ (gogoproto.nullable) = false ];
+  cosmos.base.v1beta1.Coin net = 2 [ (gogoproto.nullable) = false ];
+}
+
+message MsgClaimRevenue {
+  option (cosmos.msg.v1.signer) = "sender";
+  option (amino.name) = "vapor/settle/MsgClaimRevenue";
+  string sender = 1 [ (cosmos_proto.scalar) = "cosmos.AddressString" ];
+  uint64 app_id = 2;
+  // denoms to claim; empty = all.
+  repeated string denoms = 3;
+}
+message MsgClaimRevenueResponse {
+  repeated cosmos.base.v1beta1.Coin claimed = 1 [ (gogoproto.nullable) = false, (gogoproto.castrepeated) = "github.com/cosmos/cosmos-sdk/types.Coins" ];
+}
+
+message MsgBuyCredits {
+  option (cosmos.msg.v1.signer) = "buyer";
+  option (amino.name) = "vapor/settle/MsgBuyCredits";
+  string buyer = 1 [ (cosmos_proto.scalar) = "cosmos.AddressString" ];
+  cosmos.base.v1beta1.Coin payment = 2 [ (gogoproto.nullable) = false ];
+  // recipient of the credits (defaults to buyer).
+  string recipient = 3;
+}
+message MsgBuyCreditsResponse {
+  cosmos.base.v1beta1.Coin credits = 1 [ (gogoproto.nullable) = false ];
+}
+
+message MsgCloseTab {
+  option (cosmos.msg.v1.signer) = "sender";
+  option (amino.name) = "vapor/settle/MsgCloseTab";
+  string sender = 1 [ (cosmos_proto.scalar) = "cosmos.AddressString" ];
+  uint64 app_id = 2;
+  string payer = 3;
+  string payee = 4;
+  string denom = 5;
+}
+message MsgCloseTabResponse {
+  cosmos.base.v1beta1.Coin fee = 1 [ (gogoproto.nullable) = false ];
+  cosmos.base.v1beta1.Coin net = 2 [ (gogoproto.nullable) = false ];
+}
+
+message MsgWithdrawTreasury {
+  option (cosmos.msg.v1.signer) = "signer";
+  option (amino.name) = "vapor/settle/MsgWithdrawTreasury";
+  string signer = 1 [ (cosmos_proto.scalar) = "cosmos.AddressString" ];
+  string recipient = 2 [ (cosmos_proto.scalar) = "cosmos.AddressString" ];
+  repeated cosmos.base.v1beta1.Coin amount = 3 [ (gogoproto.nullable) = false, (gogoproto.castrepeated) = "github.com/cosmos/cosmos-sdk/types.Coins" ];
+}
+message MsgWithdrawTreasuryResponse {}
+
+message MsgDisburseRelayerPool {
+  option (cosmos.msg.v1.signer) = "signer";
+  option (amino.name) = "vapor/settle/MsgDisburseRelayerPool";
+  string signer = 1 [ (cosmos_proto.scalar) = "cosmos.AddressString" ];
+  string recipient = 2 [ (cosmos_proto.scalar) = "cosmos.AddressString" ];
+  cosmos.base.v1beta1.Coin amount = 3 [ (gogoproto.nullable) = false ];
+  // as_credits converts the pool asset into gas credits at credit_price
+  // (the asset moves to the treasury as credit-sale revenue).
+  bool as_credits = 4;
+}
+message MsgDisburseRelayerPoolResponse {
+  cosmos.base.v1beta1.Coin paid = 1 [ (gogoproto.nullable) = false ];
+}
+
+message MsgUpdateParams {
+  option (cosmos.msg.v1.signer) = "authority";
+  option (amino.name) = "vapor/settle/MsgUpdateParams";
+  string authority = 1 [ (cosmos_proto.scalar) = "cosmos.AddressString" ];
+  Params params = 2 [ (gogoproto.nullable) = false, (amino.dont_omitempty) = true ];
+}
+message MsgUpdateParamsResponse {}

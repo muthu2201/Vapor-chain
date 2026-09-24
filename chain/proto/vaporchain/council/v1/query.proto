@@ -1,0 +1,37 @@
+syntax = "proto3";
+package vaporchain.council.v1;
+
+import "gogoproto/gogo.proto";
+import "google/api/annotations.proto";
+import "vaporchain/council/v1/council.proto";
+
+option go_package = "github.com/muthu2201/vapor-chain/chain/x/council/types";
+
+// Query defines the council gRPC query service.
+service Query {
+  rpc Params(QueryParamsRequest) returns (QueryParamsResponse) {
+    option (google.api.http).get = "/vaporchain/council/v1/params";
+  }
+  rpc Admissions(QueryAdmissionsRequest) returns (QueryAdmissionsResponse) {
+    option (google.api.http).get = "/vaporchain/council/v1/admissions";
+  }
+  rpc Pauses(QueryPausesRequest) returns (QueryPausesResponse) {
+    option (google.api.http).get = "/vaporchain/council/v1/pauses";
+  }
+  rpc Provenance(QueryProvenanceRequest) returns (QueryProvenanceResponse) {
+    option (google.api.http).get = "/vaporchain/council/v1/provenance";
+  }
+}
+
+message QueryParamsRequest {}
+message QueryParamsResponse { Params params = 1 [ (gogoproto.nullable) = false ]; }
+message QueryAdmissionsRequest {}
+message QueryAdmissionsResponse { repeated Admission admissions = 1 [ (gogoproto.nullable) = false ]; }
+message QueryPausesRequest {}
+message QueryPausesResponse { repeated Pause pauses = 1 [ (gogoproto.nullable) = false ]; }
+message QueryProvenanceRequest {}
+message QueryProvenanceResponse {
+  Provenance provenance = 1 [ (gogoproto.nullable) = false ];
+  string binary_fingerprint = 2;
+  string binary_commit = 3;
+}

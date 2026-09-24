@@ -1,0 +1,152 @@
+syntax = "proto3";
+package vaporchain.apps.v1;
+
+import "gogoproto/gogo.proto";
+import "cosmos_proto/cosmos.proto";
+import "cosmos/base/v1beta1/coin.proto";
+import "amino/amino.proto";
+
+option go_package = "github.com/muthu2201/vapor-chain/chain/x/apps/types";
+
+// AppStatus is the lifecycle state of a registered application.
+enum AppStatus {
+  option (gogoproto.goproto_enum_prefix) = false;
+  APP_STATUS_UNSPECIFIED = 0;
+  APP_STATUS_ACTIVE = 1;
+  // PAUSED apps keep their contracts but earn no revenue share / quota.
+  APP_STATUS_PAUSED = 2;
+  // REVOKED apps are permanently disabled by governance; claimable revenue
+  // is frozen.
+  APP_STATUS_REVOKED = 3;
+}
+
+// ProofType records how a contract's ownership was proven.
+enum ProofType {
+  option (gogoproto.goproto_enum_prefix) = false;
+  PROOF_TYPE_UNSPECIFIED = 0;
+  // CREATE: contract == keccak(rlp(signer, nonce))[12:]
+  PROOF_TYPE_DEPLOYER_CREATE = 1;
+  // CREATE2: contract == keccak(0xff ++ signer ++ salt ++ initCodeHash)[12:]
+  PROOF_TYPE_DEPLOYER_CREATE2 = 2;
+  // Ownable(contract).owner() == signer, checked with a static EVM call.
+  PROOF_TYPE_OWNABLE = 3;
+  // The contract called SETTLE.claimRegistration(appId) and the app owner
+  // accepted the pending claim.
+  PROOF_TYPE_SELF_CLAIM = 4;
+}
+
+// Params of x/apps.
+message Params {
+  option (amino.name) = "vapor/x/apps/Params";
+  // registration_fee is burned on MsgRegisterApp (anti-spam).
+  cosmos.base.v1beta1.Coin registration_fee = 1 [ (gogoproto.nullable) = false ];
+  uint32 max_contracts_per_app = 2;
+  // contract_move_delay_blocks is the timelock for moving a contract that is
+  // already attributed to another app (default ~7 days at 1s blocks).
+  int64 contract_move_delay_blocks = 3;
+  // epoch_length_blocks is the sponsorship-quota epoch (default ~1 day).
+  int64 epoch_length_blocks = 4;
+  // base_gas_per_epoch every ACTIVE app receives.
+  uint64 base_gas_per_epoch = 5;
+  // max_gas_per_epoch caps any single app's quota.
+  uint64 max_gas_per_epoch = 6;
+  // diversity_target is the payments-per-unique-payer ratio at which an app
+  // receives full earned credit (e.g. 5 => 5 payments per payer is normal).
+  uint32 diversity_target = 7;
+  // attestors sign DNS-TXT domain ownership attestations.
+  repeated string attestors = 8 [ (cosmos_proto.scalar) = "cosmos.AddressString" ];
+  uint32 attestation_threshold = 9;
+  // max_referrer_bps bounds App.referrer_bps (share of the app's cut).
+  uint32 max_referrer_bps = 10;
+}
+
+// ContractBinding attributes a contract address to exactly one app.
+message ContractBinding {
+  // contract is 0x-hex.
+  string contract = 1;
+  uint64 app_id = 2;
+  ProofType proof_type = 3;
+  int64 added_height = 4;
+  uint32 version = 5;
+}
+
+// App is a registered application.
+message App {
+  uint64 app_id = 1;
+  string owner = 2 [ (cosmos_proto.scalar) = "cosmos.AddressString" ];
+  // pending_owner must call MsgAcceptOwnership (two-step transfer).
+  string pending_owner = 3;
+  string revenue_recipient = 4 [ (cosmos_proto.scalar) = "cosmos.AddressString" ];
+  string metadata_uri = 5;
+  string domain = 6;
+  bool domain_verified = 7;
+  // referrer_bps is the share of the app's revenue paid to the referrer passed
+  // to Settle (<= Params.max_referrer_bps).
+  uint32 referrer_bps = 8;
+  AppStatus status = 9;
+  uint32 version = 10;
+  int64 created_height = 11;
+  uint32 contract_count = 12;
+}
+
+// PendingMove is a timelocked re-attribution of a contract to another app.
+message PendingMove {
+  string contract = 1;
+  uint64 from_app_id = 2;
+  uint64 to_app_id = 3;
+  ProofType proof_type = 4;
+  int64 unlock_height = 5;
+}
+
+// PendingClaim is a contract's self-registration awaiting owner acceptance.
+message PendingClaim {
+  string contract = 1;
+  uint64 app_id = 2;
+  int64 claimed_height = 3;
+}
+
+// EpochStats aggregates Settle activity of one app in one epoch.
+message EpochStats {
+  uint64 app_id = 1;
+  uint64 epoch = 2;
+  // fee_weight is Σ(fee × asset.quota_weight) — gas units earned.
+  string fee_weight = 3 [
+    (cosmos_proto.scalar) = "cosmos.Int",
+    (gogoproto.customtype) = "cosmossdk.io/math.Int",
+    (gogoproto.nullable) = false
+  ];
+  uint64 payments = 4;
+  // hll is a 64-register HyperLogLog sketch of unique payers (constant
+  // 64 bytes of state per app per epoch instead of a set).
+  bytes hll = 5;
+}
+
+// Quota is an app's sponsorship gas allowance for the current epoch.
+message Quota {
+  uint64 app_id = 1;
+  uint64 epoch = 2;
+  uint64 gas = 3;
+  uint64 unique_payers_estimate = 4;
+  uint32 diversity_bps = 5;
+}
+
+// DomainAttestation is one attestor's signature over (app_id, domain).
+message DomainAttestation {
+  uint64 app_id = 1;
+  string domain = 2;
+  string attestor = 3;
+  int64 height = 4;
+}
+
+// GenesisState of x/apps.
+message GenesisState {
+  Params params = 1 [ (gogoproto.nullable) = false, (amino.dont_omitempty) = true ];
+  uint64 next_app_id = 2;
+  repeated App apps = 3 [ (gogoproto.nullable) = false ];
+  repeated ContractBinding bindings = 4 [ (gogoproto.nullable) = false ];
+  repeated PendingMove pending_moves = 5 [ (gogoproto.nullable) = false ];
+  repeated PendingClaim pending_claims = 6 [ (gogoproto.nullable) = false ];
+  repeated EpochStats epoch_stats = 7 [ (gogoproto.nullable) = false ];
+  repeated Quota quotas = 8 [ (gogoproto.nullable) = false ];
+  repeated DomainAttestation attestations = 9 [ (gogoproto.nullable) = false ];
+}
