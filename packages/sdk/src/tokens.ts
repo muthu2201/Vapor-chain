@@ -1,7 +1,7 @@
 // Copyright (c) 2026 VaporChain / muthu2201. All rights reserved.
 // Proprietary. See LICENSE. Provenance: VAPOR-6eabb1be532bdef4
 
-import { decodeEventLog, keccak256, stringToHex, type Address, type Hash, type Hex, type PublicClient, type WalletClient } from 'viem'
+import { decodeEventLog, encodeFunctionData, keccak256, stringToHex, type Address, type Hash, type Hex, type Log, type PublicClient, type WalletClient } from 'viem'
 import { vaporTokenFactoryAbi } from './abi/index.js'
 import { VaporError } from './errors.js'
 
@@ -60,13 +60,25 @@ export async function launchToken(
   })
   const rcpt = await client.waitForTransactionReceipt({ hash, confirmations: 2 })
   if (rcpt.status !== 'success') throw new VaporError('token launch reverted', 'CONFIG')
-  for (const log of rcpt.logs) {
+  const token = tokenFromLogs(rcpt.logs)
+  if (!token) throw new VaporError('TokenCreated event not found', 'CONFIG')
+  return { token, hash }
+}
+
+/** Calldata for factory.createToken, usable in a transaction, a 7702 batch or a UserOp. */
+export function createTokenCall(factory: Address, p: TokenLaunchParams): { to: Address; data: Hex } {
+  return { to: factory, data: encodeFunctionData({ abi: vaporTokenFactoryAbi, functionName: 'createToken', args: [toParams(p), tokenSalt(p)] }) }
+}
+
+/** The token address from a receipt's TokenCreated event, if present. */
+export function tokenFromLogs(logs: ReadonlyArray<Pick<Log, 'data' | 'topics'>>): Address | undefined {
+  for (const log of logs) {
     try {
       const ev = decodeEventLog({ abi: vaporTokenFactoryAbi, data: log.data, topics: log.topics })
-      if (ev.eventName === 'TokenCreated') return { token: ev.args.token, hash }
+      if (ev.eventName === 'TokenCreated') return ev.args.token
     } catch {
-      /* other logs */
+      /* other contracts' logs */
     }
   }
-  throw new VaporError('TokenCreated event not found', 'CONFIG')
+  return undefined
 }

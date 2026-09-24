@@ -7,6 +7,9 @@ import (
 	"context"
 	"errors"
 
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	"github.com/ethereum/go-ethereum/common"
 
 	"cosmossdk.io/collections"
@@ -24,6 +27,18 @@ var _ types.QueryServer = queryServer{}
 
 func NewQueryServerImpl(k Keeper) types.QueryServer { return queryServer{Keeper: k} }
 
+// queryErr gives clients proper status codes (REST: 404/400 instead of 500),
+// so "no such app" is distinguishable from a node failure.
+func queryErr(err error) error {
+	switch {
+	case errors.Is(err, types.ErrAppNotFound), errors.Is(err, types.ErrNotBound), errors.Is(err, collections.ErrNotFound):
+		return status.Error(codes.NotFound, err.Error())
+	case errors.Is(err, types.ErrInvalidField):
+		return status.Error(codes.InvalidArgument, err.Error())
+	}
+	return err
+}
+
 func (q queryServer) Params(goCtx context.Context, _ *types.QueryParamsRequest) (*types.QueryParamsResponse, error) {
 	return &types.QueryParamsResponse{Params: q.GetParams(sdk.UnwrapSDKContext(goCtx))}, nil
 }
@@ -31,7 +46,7 @@ func (q queryServer) Params(goCtx context.Context, _ *types.QueryParamsRequest) 
 func (q queryServer) App(goCtx context.Context, req *types.QueryAppRequest) (*types.QueryAppResponse, error) {
 	app, err := q.GetApp(sdk.UnwrapSDKContext(goCtx), req.AppId)
 	if err != nil {
-		return nil, err
+		return nil, queryErr(err)
 	}
 	return &types.QueryAppResponse{App: app}, nil
 }
@@ -41,26 +56,26 @@ func (q queryServer) Apps(goCtx context.Context, req *types.QueryAppsRequest) (*
 		return a, nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, queryErr(err)
 	}
 	return &types.QueryAppsResponse{Apps: apps, Pagination: page}, nil
 }
 
 func (q queryServer) AppByContract(goCtx context.Context, req *types.QueryAppByContractRequest) (*types.QueryAppByContractResponse, error) {
 	if !common.IsHexAddress(req.Contract) {
-		return nil, types.ErrInvalidField.Wrap("contract must be 0x address")
+		return nil, queryErr(types.ErrInvalidField.Wrap("contract must be 0x address"))
 	}
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	b, err := q.Bindings.Get(ctx, types.NormalizeContract(req.Contract))
 	if errors.Is(err, collections.ErrNotFound) {
-		return nil, types.ErrNotBound
+		return nil, queryErr(types.ErrNotBound)
 	}
 	if err != nil {
-		return nil, err
+		return nil, queryErr(err)
 	}
 	app, err := q.GetApp(ctx, b.AppId)
 	if err != nil {
-		return nil, err
+		return nil, queryErr(err)
 	}
 	return &types.QueryAppByContractResponse{Binding: b, App: app}, nil
 }
@@ -80,6 +95,9 @@ func (q queryServer) Contracts(goCtx context.Context, req *types.QueryContractsR
 
 func (q queryServer) Quota(goCtx context.Context, req *types.QueryQuotaRequest) (*types.QueryQuotaResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
+	if _, err := q.GetApp(ctx, req.AppId); err != nil {
+		return nil, queryErr(err)
+	}
 	epoch, start := q.Keeper.CurrentEpoch(ctx)
 	st, err := q.EpochStats.Get(ctx, collections.Join(epoch, req.AppId))
 	if err != nil {

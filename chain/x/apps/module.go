@@ -119,6 +119,19 @@ func (AppModule) AutoCLIOptions() *autocliv1.ModuleOptions {
 					PositionalArgs: []*autocliv1.PositionalArgDescriptor{{ProtoField: "revenue_recipient"}, {ProtoField: "metadata_uri"}},
 				},
 				{
+					RpcMethod: "AddContract", Use: "add-contract [app-id] [0x-contract]",
+					Short: "Attribute a contract you deployed or own to your app",
+					Long: "Proves ownership with --proof, one of:\n" +
+						`  {"type":"PROOF_TYPE_DEPLOYER_CREATE","nonce":"7"}                         you deployed it with CREATE at that nonce` + "\n" +
+						`  {"type":"PROOF_TYPE_DEPLOYER_CREATE2","salt":"0x..","init_code_hash":"0x.."}  you deployed it with CREATE2` + "\n" +
+						`  {"type":"PROOF_TYPE_OWNABLE"}                                            owner() returns your address`,
+					PositionalArgs: []*autocliv1.PositionalArgDescriptor{{ProtoField: "app_id"}, {ProtoField: "contract"}},
+				},
+				{
+					RpcMethod: "UpdateApp", Use: "update-app [app-id]", Short: "Change an app's revenue recipient, metadata or referrer share",
+					PositionalArgs: []*autocliv1.PositionalArgDescriptor{{ProtoField: "app_id"}},
+				},
+				{
 					RpcMethod: "AcceptContractClaim", Use: "accept-claim [app-id] [0x-contract]", Short: "Accept a contract's self-registration",
 					PositionalArgs: []*autocliv1.PositionalArgDescriptor{{ProtoField: "app_id"}, {ProtoField: "contract"}},
 				},

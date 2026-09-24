@@ -28,3 +28,6 @@ coverage/
 *.swp
 services/bundler/node_modules/
 /archive/
+next-env.d.ts
+test-results/
+playwright-report/

@@ -97,11 +97,12 @@ export function usePredictedTokenAddress(p?: TokenLaunchParams) {
 }
 
 /** Launch an ERC-20 through the VaporChain token factory. */
-export function useLaunchToken() {
+export function useLaunchToken(opts?: { sponsored?: boolean }) {
   const { client } = useVapor()
   const invalidate = useInvalidateVapor()
+  const sponsored = opts?.sponsored ?? false
   return useMutation({
-    mutationFn: (p: TokenLaunchParams) => client.tokens.launch(p),
+    mutationFn: (p: TokenLaunchParams) => client.tokens.launch(p, { sponsored }),
     onSuccess: () => void invalidate(),
   })
 }

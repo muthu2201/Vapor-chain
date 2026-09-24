@@ -20,7 +20,7 @@ import { skipClient, type BridgeStage, type RouteRequest } from './bridge.js'
 import type { VaporNetwork } from './chains.js'
 import { VaporError } from './errors.js'
 import { appOf, claimable, quoteFee, settleCalls } from './settle.js'
-import { launchToken, predictTokenAddress, type TokenLaunchParams } from './tokens.js'
+import { createTokenCall, launchToken, predictTokenAddress, tokenFromLogs, type TokenLaunchParams } from './tokens.js'
 import { SETTLE_ADDRESS } from './constants.js'
 import type { PrivateKeyAccount } from 'viem/accounts'
 import type { SkipRoute } from './bridge.js'
@@ -65,7 +65,11 @@ export interface VaporClient {
   }
   tokens: {
     predict(creator: Address, p: TokenLaunchParams): Promise<Address>
-    launch(p: TokenLaunchParams): Promise<{ token: Address; hash: Hash }>
+    /**
+     * Launch an ERC-20. `sponsored: true` sends it as a gasless UserOp paid by
+     * this client's `appId` (e.g. a launchpad app the factory is attributed to).
+     */
+    launch(p: TokenLaunchParams, opts?: { sponsored?: boolean }): Promise<{ token: Address; hash: Hash }>
   }
 }
 
@@ -194,9 +198,16 @@ export function createVaporClient(cfg: VaporClientConfig): VaporClient {
 
     tokens: {
       predict: (creator: Address, p: TokenLaunchParams) => predictTokenAddress(publicClient, cfg.contracts.tokenFactory, creator, p),
-      async launch(p: TokenLaunchParams) {
-        const { wallet: w } = needAccount()
-        return launchToken(w, publicClient, cfg.contracts.tokenFactory, p)
+      async launch(p: TokenLaunchParams, opts?: { sponsored?: boolean }) {
+        if (!opts?.sponsored) {
+          const { wallet: w } = needAccount()
+          return launchToken(w, publicClient, cfg.contracts.tokenFactory, p)
+        }
+        const call = createTokenCall(cfg.contracts.tokenFactory, p)
+        const r = await (await sender()).send([call])
+        const token = tokenFromLogs(r.receipt.logs)
+        if (!token) throw new VaporError('TokenCreated event not found in the UserOperation', 'CONFIG')
+        return { token, hash: r.receipt.receipt.transactionHash }
       },
     },
   }
