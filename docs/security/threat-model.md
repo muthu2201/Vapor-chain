@@ -59,8 +59,11 @@ enforced and tested. It is written so an auditor can map every claim to code.
 ### Credits and power are not currency
 - `acredit` and `avpower` have `SendEnabled = false`. Verified live: a bank
   `MsgSend` of `acredit` commits as a **failed tx** —
-  `"acredit transfers are currently disabled"` (code 5). Credits move only as
-  EVM gas value; power is minted/burned only by the council.
+  `"acredit transfers are currently disabled"` (code 5). Credits still move as
+  EVM native value (gas, and plain value transfers — required by ERC-4337
+  deposits and bundler reimbursement), so holders can trade them peer-to-peer;
+  the protocol never redeems them and supply only grows via `buyCredits`.
+  Power has no EVM representation and is minted/burned only by the council.
 - IBC can never export them: `x/council/ibcguard` hard-blocks `acredit`/`avpower`
   on send in both directions (acks/timeouts still pass so stuck transfers
   refund). `TestCreditAndPowerNeverLeave`.

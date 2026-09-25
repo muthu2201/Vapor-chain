@@ -53,7 +53,7 @@ jobs:
         run: forge build --sizes
       - name: lint
         working-directory: contracts
-        run: forge lint --severity high src
+        run: forge lint src --severity high
       - name: test
         working-directory: contracts
         run: forge test -vvv
@@ -75,7 +75,7 @@ jobs:
       - name: typecheck
         run: pnpm -r run typecheck
       - name: unit tests
-        run: pnpm -r --filter ./packages/** run test
+        run: pnpm -r --filter './packages/**' run test
 
   secrets-scan:
     name: no committed keys

@@ -1,0 +1,51 @@
+{
+  "scenario": "transfer",
+  "duration_sec": 30.002578236,
+  "target_rate_tps": 200,
+  "sent": 5980,
+  "accepted_by_mempool": 5980,
+  "rejected_by_mempool": 0,
+  "reject_reasons": {},
+  "included_onchain": 5980,
+  "reverted_onchain": 0,
+  "inclusion_rate": 1,
+  "onchain_tps": 192.88718359094602,
+  "latency_ms": {
+    "max": 1735,
+    "p50": 774,
+    "p95": 1297,
+    "p99": 1556
+  },
+  "blocks_observed": 34,
+  "block_time_ms": {
+    "max": 1101,
+    "p50": 1001,
+    "p95": 1076
+  },
+  "max_tx_per_block": 247,
+  "block_gas_utilization": {
+    "max": 0.129675,
+    "p50": 0.103425
+  },
+  "max_sponsored_gas_share": 0,
+  "chain_window": {
+    "from_height": 1463,
+    "to_height": 1499,
+    "blocks": 37,
+    "nonempty_blocks": 31,
+    "evm_txs": 5980,
+    "span_sec": 32.166,
+    "sustained_tps": 185.9,
+    "peak_block": {
+      "height": 1484,
+      "txs": 247,
+      "block_time_ms": 1053
+    },
+    "peak_gas_used_ratio": 0.1297,
+    "peak_gas_reserved_ratio": 0.1297,
+    "gas_used_per_tx": 21000,
+    "gas_reserved_per_tx": 21000,
+    "sponsored_txs": 0,
+    "max_sponsored_gas_share": 0.0
+  }
+}

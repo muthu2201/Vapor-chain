@@ -1,0 +1,69 @@
+{
+  "creditPriceAcreditPerUusdc": "1000000000000000",
+  "usdPerCredit": 0.001,
+  "registration": {
+    "feeAcredit": "10000000000000000000",
+    "feeUsd": 0.01,
+    "gasUsed": "68449",
+    "gasAcredit": "77005125000000",
+    "gasUsd": 7.7005125e-8
+  },
+  "registered": {
+    "paymentUusdc": "10000000",
+    "feeUusdc": "100000",
+    "merchantNetUusdc": "9900000",
+    "devShareUusdc": "50000",
+    "treasuryShareUusdc": "20000",
+    "userGasPaidAcredit": "0",
+    "sponsoredOpGasUsed": "430616",
+    "sponsoredOpCostAcredit": "538270000000000",
+    "sponsoredOpCostUsd": 5.3827e-7,
+    "note": "first op also carries the EIP-7702 authorization for the new account"
+  },
+  "bypassOnboardingWall": {
+    "usdcHeldUusdc": "50000000",
+    "creditsHeld": "0",
+    "plainTransfer": "rejected: insufficient funds for gas",
+    "buyCredits": "rejected: insufficient funds for gas",
+    "consequence": "off-registry a new user needs a third party to hand them gas credits before their first transaction"
+  },
+  "bypassPlain": {
+    "thirdPartyFundingGasAcredit": "23625000000000",
+    "creditsGrantedAcredit": "10000000000000000",
+    "transferGasUsed": "30596",
+    "effectiveGasPriceWei": "1125000000",
+    "transferCostAcredit": "34420500000000",
+    "transferCostUsd": 3.44205e-8,
+    "protocolFeeUusdc": "0",
+    "payeeReceivedUusdc": "10000000",
+    "devRevenueUusdc": "0",
+    "transfersPerGrant": 290
+  },
+  "bypassRails": {
+    "feeUusdc": "100000",
+    "payeeNetUusdc": "9900000",
+    "treasuryShareUusdc": "70000",
+    "appShareForfeitedUusdc": "50000",
+    "devRevenueUusdc": "0",
+    "userGasUsed": "105807",
+    "userGasAcredit": "119032875000000",
+    "userGasUsd": 1.19032875e-7
+  },
+  "sponsorRefusals": [
+    "sponsorship denied: call target 0xE506E5D79656BBeaf060176E9152a9F752155490 is not a contract of app 7",
+    "sponsorship denied: call target 0xb235A1c5b84eaEe836DC48DFD50325190371303F is not a contract of app 7",
+    "sponsorship denied: SETTLE.approveApp must target the sponsoring app"
+  ],
+  "sybil": {
+    "appsRegistered": 3,
+    "registrationFeeAcredit": "10000000000000000000",
+    "registrationFeeUsd": 0.01,
+    "baseGasPerEpoch": "2000000",
+    "epochLengthBlocks": 60,
+    "quotaPerAppGas": [
+      "2000000",
+      "2000000",
+      "2000000"
+    ]
+  }
+}

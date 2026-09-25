@@ -1,6 +1,15 @@
 <!-- Copyright (c) 2026 VaporChain / muthu2201. All rights reserved. Provenance: VAPOR-6eabb1be532bdef4 -->
 # VaporChain stress-test results
 
+> **Correction (see `mainnet-sim.md`, finding F-6).** The `on-chain tps` column
+> below is `included ÷ send window`. When transactions keep landing long after
+> sending stops (every run past the knee), that overstates throughput — e.g. a
+> later Settle run reported 270.9 tps where the chain-verified sustained rate
+> was 129.8. Rows with 100% inclusion and sub-second latency are unaffected.
+> For capacity numbers use `mainnet-sim.md` §4, which reads every figure back
+> from the chain. The qualitative findings here (fee floor, lane cap 0.500,
+> graceful backpressure, STRESS-HALT) stand and were re-confirmed.
+
 All runs use `tools/loadgen` against a **4-validator localnet** (native
 processes, `scripts/localnet/localnet.sh`), 40M block gas, ~1s blocks,
 `min-gas-price = 1 gwei` (1e9 `acredit`), fee floor active, sponsored-lane cap

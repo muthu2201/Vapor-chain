@@ -52,18 +52,33 @@ The core money paths were found **sound**; they are documented here so the
 - **Credits are bought, never minted for free.** `acredit` is minted only by
   `BuyCredits` at the governance price (USDC → treasury), tracked by
   `CreditsMinted`, and bounded by the `supply ≤ genesis + minted` invariant.
-  `SendEnabled=false` means they can never be sold back or transferred bank-side.
+  `SendEnabled=false` blocks bank transfers and the protocol never redeems
+  credits for USDC. (They *can* move peer-to-peer as EVM native value — ERC-4337
+  deposits need that — so holders can trade them OTC; that does not create
+  supply, which only grows via `BuyCredits`.)
 - **Withdrawals are authority-gated and pool-bounded.** `WithdrawTreasury` and
   `DisburseRelayerPool` can only draw from their own pool balance and only by
   the module authority / governed path; `addInt` refuses to overdraw a pool.
-- **Free-gas farming is ~1000× unprofitable.** The one place fees earn a
-  subsidy is quota (fee-weighted). We computed the ratio: 1 uusdc of fees paid
-  earns quota worth on the order of 0.001 uusdc of gas. There is no positive-EV
-  loop where an app pays fees to farm more sponsored gas than it paid for.
+- **Farming *earned* quota is ~1000× unprofitable.** Earned quota is
+  fee-weighted: 1 uusdc of fees paid earns quota worth on the order of 0.001
+  uusdc of gas. There is no positive-EV loop where an app pays fees to farm more
+  sponsored gas than it paid for.
+- **CORRECTION (found in the mainnet-sim, `docs/benchmarks/mainnet-sim.md` F-1):
+  the *base* quota is Sybil-farmable.** Every ACTIVE app gets
+  `base_gas_per_epoch` (2,000,000 gas / 60 blocks) unconditionally — no payment,
+  attestation or age required (`x/apps/keeper/keeper.go:QuotaFor`) — while
+  registration costs only 10 CREDIT ($0.01 at genesis prices). Measured live:
+  three fresh registrations each had the full 2M quota immediately. ~600 such
+  apps can fill the entire 50% sponsored lane every epoch for about $6 one-off,
+  paid for by the protocol paymaster. The dollar drain is tiny at genesis gas
+  prices, but it scales 1:1 with any repricing of gas, and the lane contention
+  is a real DoS on legitimate apps' gasless UX. An earlier version of this
+  section said no subsidy loophole existed; that was wrong for base quota.
 
 **Conclusion of the drain audit:** value into `x/settle` is conserved on every
-path; no attribution or subsidy loophole was found that lets one party drain
-another's balance or extract net subsidy.
+path, and no attribution loophole lets one party drain another's balance. One
+subsidy gap exists — the unconditional base quota above — and is open pending
+an economics decision (fix options in the benchmark doc).
 
 ---
 
@@ -94,6 +109,14 @@ chain — by a registered app or a completely independent contract — converts,
 over time, into protocol revenue. This is the honest, EVM-compatible version of
 "you cannot use the chain without paying us": not a block on deployment, but an
 unavoidable economic funnel through a bought-and-burned compute voucher.
+
+**Magnitude — measured, and small at genesis prices.** The funnel is real
+(burn == fees, exact to the wei, across a whole load campaign) but its size is
+`gas × gas_price ÷ credit_price`. At the genesis values (1 gwei floor, 1 CREDIT
+= $0.001) an ERC-20 transfer burns about **$3.4×10⁻⁸** of credits. So today the
+burn is a correct mechanism with negligible revenue; it only becomes a
+meaningful capture (and a meaningful cost of bypassing the registry) once gas is
+repriced. See `docs/benchmarks/mainnet-sim.md` §Registry economics.
 
 **Why it is safe.**
 - Validators are **not** paid from gas; they are paid from the USDC validator

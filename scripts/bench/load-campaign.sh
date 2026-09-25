@@ -45,9 +45,16 @@ for r in "${RUNS[@]}"; do
   echo "== $sc @ $rate tps" >&2
   args=(run -scenario "$sc" -rate "$rate" -duration "${DURATION:-30s}" -accounts "$ACC" -rpc "$RPCS" -comet "$COMET" -token "$USDC" -out "$f")
   [[ $sc == sponsored ]] && args+=(-sponsor-key "$SPONSOR_KEY")
+  a=$(height)
   "$LOADGEN" "${args[@]}" >/dev/null
-  jq -c '{scenario, target_rate_tps, onchain_tps, inclusion_rate, reverted_onchain, max_tx_per_block, block_gas_utilization, max_sponsored_gas_share, latency_ms, block_time_ms}' "$f" >&2
   settle
+  # objective view of the same window, read back from the chain; the lane
+  # share is recomputed per block from the signers of the sponsored sender
+  w=$(python3 "$ROOT/scripts/bench/chain-window.py" "$a" "$(($(height) - 1))" \
+        http://127.0.0.1:8545 "$COMET" "$(jq -r .bundler_hex "$NET_DIR/accounts.json")")
+  jq --argjson w "$w" '. + {chain_window: $w}' "$f" >"$f.tmp" && mv "$f.tmp" "$f"
+  jq -c '{scenario, target_rate_tps, onchain_tps_sustained, inclusion_rate, reverted_onchain, max_sponsored_gas_share,
+          chain: (.chain_window | {sustained_tps, peak_block, peak_gas_used_ratio, peak_gas_reserved_ratio, max_sponsored_gas_share})}' "$f" >&2
 done
 settle
 H1=$(height)

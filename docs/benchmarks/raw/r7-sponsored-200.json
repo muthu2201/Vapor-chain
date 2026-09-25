@@ -1,0 +1,68 @@
+{
+  "scenario": "sponsored",
+  "duration_sec": 30.604519016,
+  "target_rate_tps": 200,
+  "sent": 5985,
+  "accepted_by_mempool": 5967,
+  "rejected_by_mempool": 18,
+  "reject_reasons": {
+    "nonce too low: next nonce 200, tx nonce 193": 1,
+    "nonce too low: next nonce 200, tx nonce 194": 1,
+    "nonce too low: next nonce 200, tx nonce 195": 1,
+    "nonce too low: next nonce 200, tx nonce 196": 1,
+    "nonce too low: next nonce 200, tx nonce 197": 1,
+    "nonce too low: next nonce 200, tx nonce 198": 1,
+    "nonce too low: next nonce 200, tx nonce 199": 2,
+    "nonce too low: next nonce 201, tx nonce 194": 1,
+    "nonce too low: next nonce 201, tx nonce 195": 1,
+    "nonce too low: next nonce 201, tx nonce 196": 1,
+    "nonce too low: next nonce 201, tx nonce 197": 1,
+    "nonce too low: next nonce 201, tx nonce 198": 1,
+    "nonce too low: next nonce 201, tx nonce 199": 1,
+    "nonce too low: next nonce 201, tx nonce 200": 1,
+    "nonce too low: next nonce 205, tx nonce 203": 1,
+    "nonce too low: next nonce 205, tx nonce 204": 2
+  },
+  "included_onchain": 5936,
+  "reverted_onchain": 0,
+  "inclusion_rate": 0.9948047595106418,
+  "onchain_tps": 187.8212415444405,
+  "latency_ms": {
+    "max": 44636,
+    "p50": 1832,
+    "p95": 40361,
+    "p99": 43875
+  },
+  "blocks_observed": 75,
+  "block_time_ms": {
+    "max": 1141,
+    "p50": 999,
+    "p95": 1083
+  },
+  "max_tx_per_block": 217,
+  "block_gas_utilization": {
+    "max": 0.342925,
+    "p50": 0.25
+  },
+  "max_sponsored_gas_share": 0.5,
+  "chain_window": {
+    "from_height": 1702,
+    "to_height": 1779,
+    "blocks": 78,
+    "nonempty_blocks": 76,
+    "evm_txs": 5985,
+    "span_sec": 77.42,
+    "sustained_tps": 77.3,
+    "peak_block": {
+      "height": 1732,
+      "txs": 217,
+      "block_time_ms": 1003
+    },
+    "peak_gas_used_ratio": 0.3429,
+    "peak_gas_reserved_ratio": 0.6078,
+    "gas_used_per_tx": 136253,
+    "gas_reserved_per_tx": 262107,
+    "sponsored_txs": 3008,
+    "max_sponsored_gas_share": 0.5
+  }
+}

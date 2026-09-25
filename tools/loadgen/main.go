@@ -132,17 +132,22 @@ var (
 )
 
 type report struct {
-	Scenario          string             `json:"scenario"`
-	DurationSec       float64            `json:"duration_sec"`
-	TargetRate        int                `json:"target_rate_tps"`
-	Sent              int64              `json:"sent"`
-	Accepted          int64              `json:"accepted_by_mempool"`
-	Rejected          int64              `json:"rejected_by_mempool"`
-	RejectReasons     map[string]int64   `json:"reject_reasons"`
-	Included          int                `json:"included_onchain"`
-	Failed            int                `json:"reverted_onchain"`
-	InclusionRate     float64            `json:"inclusion_rate"`
+	Scenario      string           `json:"scenario"`
+	DurationSec   float64          `json:"duration_sec"`
+	TargetRate    int              `json:"target_rate_tps"`
+	Sent          int64            `json:"sent"`
+	Accepted      int64            `json:"accepted_by_mempool"`
+	Rejected      int64            `json:"rejected_by_mempool"`
+	RejectReasons map[string]int64 `json:"reject_reasons"`
+	Included      int              `json:"included_onchain"`
+	Failed        int              `json:"reverted_onchain"`
+	InclusionRate float64          `json:"inclusion_rate"`
+	// TPS is included / send window. It overstates throughput whenever txs keep
+	// landing long after sending stops (high latency past the knee); use
+	// TPSSustained, which divides by the real inclusion span, for capacity.
 	TPS               float64            `json:"onchain_tps"`
+	TPSSustained      float64            `json:"onchain_tps_sustained"`
+	InclusionSpanSec  float64            `json:"inclusion_span_sec"`
 	LatencyMs         map[string]float64 `json:"latency_ms"`
 	Blocks            int                `json:"blocks_observed"`
 	BlockTimeMs       map[string]float64 `json:"block_time_ms"`
@@ -429,6 +434,18 @@ func cmdRun(args []string) {
 	}
 	if elapsed > 0 {
 		rep.TPS = float64(included) / (elapsed + 1)
+	}
+	// sustained: from the first send to the commit of the last block holding
+	// one of our txs (block H is committed at the header time of H+1)
+	var lastH uint64
+	for _, in := range incl {
+		lastH = max(lastH, in.height)
+	}
+	if lastH > 0 {
+		if span := blockTime(*comet, lastH+1, 0).Sub(deadline.Add(-*dur)).Seconds(); span > 0 {
+			rep.InclusionSpanSec = span
+			rep.TPSSustained = float64(included) / span
+		}
 	}
 	bz, _ := json.MarshalIndent(rep, "", "  ")
 	fmt.Println(string(bz))

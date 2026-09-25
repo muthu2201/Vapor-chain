@@ -70,8 +70,13 @@ versions, and why they matter:
   minted **only** by `x/settle.BuyCredits` at a governance-fixed price (so credit
   supply is always backed by USDC paid in), and it has `SendEnabled=false`: you
   cannot bank-transfer it. *Why:* gas should be a pass-through utility, not a
-  speculative token; making it non-transferable removes an entire class of
-  "gas-token" market and MEV.
+  speculative token. **Precisely what that does and does not stop** (measured in
+  `docs/benchmarks/mainnet-sim.md`): the protocol never redeems credits for USDC,
+  bank `MsgSend` fails, and IBC export is blocked — but credits *do* move
+  peer-to-peer as **EVM native value**, because ERC-4337 needs that (EntryPoint
+  deposits, bundler reimbursement, 7702 accounts). So an OTC market between
+  holders is possible; what is impossible is minting credits any way other than
+  `buyCredits` (USDC → treasury) or cashing them out of the protocol.
 - **`avpower`** — validator power. Non-transferable, minted only by `x/council`
   on admission. *Why:* PoA — power is granted by governance, never bought or
   moved.
