@@ -14,6 +14,7 @@ import (
 	"cosmossdk.io/math"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 
 	"github.com/muthu2201/vapor-chain/chain/constants"
 	"github.com/muthu2201/vapor-chain/chain/testutil"
@@ -281,4 +282,52 @@ func TestRandomOperationsConserveFunds(t *testing.T) {
 		}
 	}
 	requireSolvent(t, e)
+}
+
+// TestBurnGasFees verifies the deflationary gas burn: the credit denom that
+// accrues in the fee collector is destroyed (not recirculated), by the
+// governance-set fraction, before validators are paid.
+func TestBurnGasFees(t *testing.T) {
+	fund := func(e *testutil.Env, amt int64) {
+		coins := sdk.NewCoins(sdk.NewCoin(constants.CreditDenom, math.NewInt(amt)))
+		require.NoError(t, e.App.BankKeeper.MintCoins(e.Ctx, settletypes.ModuleName, coins))
+		require.NoError(t, e.App.BankKeeper.SendCoinsFromModuleToModule(e.Ctx, settletypes.ModuleName, authtypes.FeeCollectorName, coins))
+	}
+	feeColl := func(e *testutil.Env) math.Int {
+		addr := e.App.AccountKeeper.GetModuleAddress(authtypes.FeeCollectorName)
+		return e.App.BankKeeper.GetBalance(e.Ctx, addr, constants.CreditDenom).Amount
+	}
+	supply := func(e *testutil.Env) math.Int {
+		return e.App.BankKeeper.GetSupply(e.Ctx, constants.CreditDenom).Amount
+	}
+
+	// 100% burn (default): fee collector emptied, supply drops by the full amount.
+	e := testutil.Setup(t, 1)
+	fund(e, 1_000_000)
+	s0 := supply(e)
+	e.App.SettleKeeper.BurnGasFees(e.Ctx)
+	require.True(t, feeColl(e).IsZero(), "fee collector should be emptied at 100%")
+	require.Equal(t, s0.SubRaw(1_000_000), supply(e), "supply should drop by the burned amount")
+
+	// 50% burn: half destroyed, half left for distribution.
+	e2 := testutil.Setup(t, 1)
+	p := e2.App.SettleKeeper.GetParams(e2.Ctx)
+	p.GasBurnBps = 5_000
+	require.NoError(t, e2.App.SettleKeeper.SetParams(e2.Ctx, p))
+	fund(e2, 1_000_000)
+	s2 := supply(e2)
+	e2.App.SettleKeeper.BurnGasFees(e2.Ctx)
+	require.Equal(t, math.NewInt(500_000), feeColl(e2), "half should remain for validators")
+	require.Equal(t, s2.SubRaw(500_000), supply(e2), "supply should drop by half")
+
+	// disabled: nothing burned.
+	e3 := testutil.Setup(t, 1)
+	p3 := e3.App.SettleKeeper.GetParams(e3.Ctx)
+	p3.GasBurnBps = 0
+	require.NoError(t, e3.App.SettleKeeper.SetParams(e3.Ctx, p3))
+	fund(e3, 1_000_000)
+	s3 := supply(e3)
+	e3.App.SettleKeeper.BurnGasFees(e3.Ctx)
+	require.Equal(t, math.NewInt(1_000_000), feeColl(e3), "nothing burned when disabled")
+	require.Equal(t, s3, supply(e3))
 }

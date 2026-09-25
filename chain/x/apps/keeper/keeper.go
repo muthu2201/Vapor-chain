@@ -112,6 +112,14 @@ func (k Keeper) GetParams(ctx sdk.Context) types.Params {
 	return p
 }
 
+// SetParams validates and stores params (tests/genesis).
+func (k Keeper) SetParams(ctx sdk.Context, p types.Params) error {
+	if err := p.Validate(); err != nil {
+		return err
+	}
+	return k.Params.Set(ctx, p)
+}
+
 // GetApp returns an app or ErrAppNotFound.
 func (k Keeper) GetApp(ctx sdk.Context, appID uint64) (types.App, error) {
 	app, err := k.Apps.Get(ctx, appID)
@@ -539,6 +547,17 @@ func (k Keeper) finalizeMoves(ctx sdk.Context) error {
 		}
 		to, err := k.GetApp(ctx, mv.ToAppId)
 		if err != nil || to.Status == types.APP_STATUS_REVOKED {
+			continue
+		}
+		// Re-check the cap at finalize time: the destination app may have added
+		// contracts between scheduling and unlock. If it is now full, drop the
+		// move (the contract stays with its current app) rather than exceeding
+		// the cap.
+		if to.ContractCount >= k.GetParams(ctx).MaxContractsPerApp {
+			ctx.EventManager().EmitEvent(sdk.NewEvent("app_contract_move_dropped",
+				sdk.NewAttribute("contract", c),
+				sdk.NewAttribute("to_app_id", fmt.Sprint(mv.ToAppId)),
+				sdk.NewAttribute("reason", "destination app is full")))
 			continue
 		}
 		if b, err := k.Bindings.Get(ctx, c); err == nil {

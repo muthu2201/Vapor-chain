@@ -521,12 +521,14 @@ func NewVaporApp(
 		ibcexported.ModuleName, ibctransfertypes.ModuleName,
 		erc20types.ModuleName, feemarkettypes.ModuleName,
 		evmtypes.ModuleName, // must come after feemarket
+		// settle BEFORE distribution: BurnGasFees destroys the prior block's gas
+		// fees in the fee collector before distribution can allocate them.
+		counciltypes.ModuleName, appstypes.ModuleName, settletypes.ModuleName,
 		distrtypes.ModuleName, slashingtypes.ModuleName,
 		evidencetypes.ModuleName, stakingtypes.ModuleName,
 		authtypes.ModuleName, banktypes.ModuleName, govtypes.ModuleName, genutiltypes.ModuleName,
 		authz.ModuleName, feegrant.ModuleName, consensusparamtypes.ModuleName, vestingtypes.ModuleName,
 		packetforwardtypes.ModuleName, ratelimittypes.ModuleName,
-		counciltypes.ModuleName, appstypes.ModuleName, settletypes.ModuleName,
 	)
 
 	// settle before staking: validator payouts use the bonded set that

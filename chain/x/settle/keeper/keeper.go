@@ -113,6 +113,15 @@ func (k Keeper) GetParams(ctx sdk.Context) types.Params {
 	return p
 }
 
+// SetParams validates and stores params (used by tests and genesis; the Msg
+// path validates then calls Params.Set directly).
+func (k Keeper) SetParams(ctx sdk.Context, p types.Params) error {
+	if err := p.Validate(); err != nil {
+		return err
+	}
+	return k.Params.Set(ctx, p)
+}
+
 func (k Keeper) moduleAddr() sdk.AccAddress {
 	return k.accountKeeper.GetModuleAddress(types.ModuleName)
 }

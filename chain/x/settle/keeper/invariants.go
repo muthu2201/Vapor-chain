@@ -93,6 +93,14 @@ func (k Keeper) runInvariants(ctx sdk.Context) {
 	}
 }
 
+// BeginBlock burns the gas fees collected in the previous block before
+// x/distribution can allocate them to validators (settle is ordered ahead of
+// distribution in the begin-blockers). See BurnGasFees.
+func (k Keeper) BeginBlock(ctx sdk.Context) error {
+	k.BurnGasFees(ctx)
+	return nil
+}
+
 // EndBlock runs validator payouts and the periodic invariant checks.
 func (k Keeper) EndBlock(ctx sdk.Context) error {
 	if err := k.PayoutValidators(ctx); err != nil {

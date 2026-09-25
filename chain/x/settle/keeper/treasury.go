@@ -10,6 +10,7 @@ import (
 	"cosmossdk.io/math"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 
 	appstypes "github.com/muthu2201/vapor-chain/chain/x/apps/types"
 	"github.com/muthu2201/vapor-chain/chain/x/settle/types"
@@ -213,4 +214,53 @@ func (k Keeper) DisburseRelayerPool(ctx sdk.Context, signer string, recipient sd
 		sdk.NewAttribute("signer", signer), sdk.NewAttribute("recipient", recipient.String()),
 		sdk.NewAttribute("amount", amount.String()), sdk.NewAttribute("paid", out.String())))
 	return out, nil
+}
+
+// BurnGasFees permanently destroys a governance-set fraction (gas_burn_bps) of
+// the EVM gas fees (credit denom) that accumulated in the fee collector during
+// the previous block, BEFORE x/distribution allocates them to validators
+// (x/settle is ordered ahead of x/distribution in the begin-blockers).
+//
+// WHY BURN GAS: it turns the gas credit into a deflationary, bought-and-consumed
+// compute voucher. Credits are minted ONLY by BuyCredits at the governance
+// price (USDC -> treasury) and can never be sold back (SendEnabled=false), so
+// burning what is spent forces the circulating supply to be replenished by more
+// USDC purchases. Every unit of computation on the chain — by a registered app
+// or a completely independent deployment — therefore converts, over time, into
+// protocol (treasury) revenue. Validators are compensated from the USDC
+// validator pool (see PayoutValidators), not from gas, so burning gas costs
+// them nothing. It never fails a block: any error is logged and skipped.
+func (k Keeper) BurnGasFees(ctx sdk.Context) {
+	bps := k.GetParams(ctx).GasBurnBps
+	if bps == 0 {
+		return
+	}
+	feeCollector := k.accountKeeper.GetModuleAddress(authtypes.FeeCollectorName)
+	if feeCollector == nil {
+		return
+	}
+	bal := k.bankKeeper.GetBalance(ctx, feeCollector, k.creditDenom).Amount
+	if !bal.IsPositive() {
+		return
+	}
+	burn := bal
+	if bps < types.MaxBps {
+		burn = bal.Mul(math.NewInt(int64(bps))).Quo(math.NewInt(types.MaxBps))
+	}
+	if !burn.IsPositive() {
+		return
+	}
+	coins := sdk.NewCoins(sdk.NewCoin(k.creditDenom, burn))
+	if err := k.bankKeeper.SendCoinsFromModuleToModule(ctx, authtypes.FeeCollectorName, types.ModuleName, coins); err != nil {
+		k.Logger(ctx).Error("gas burn: move from fee collector failed", "err", err)
+		return
+	}
+	if err := k.bankKeeper.BurnCoins(ctx, types.ModuleName, coins); err != nil {
+		k.Logger(ctx).Error("gas burn: burn failed", "err", err)
+		return
+	}
+	ctx.EventManager().EmitEvent(sdk.NewEvent("settle_gas_burned",
+		sdk.NewAttribute("denom", k.creditDenom),
+		sdk.NewAttribute("amount", burn.String()),
+	))
 }

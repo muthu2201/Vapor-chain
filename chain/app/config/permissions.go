@@ -45,7 +45,7 @@ var maccPerms = map[string][]string{
 
 	counciltypes.ModuleName: {authtypes.Minter},
 	appstypes.ModuleName:    {authtypes.Burner},
-	settletypes.ModuleName:  {authtypes.Minter},
+	settletypes.ModuleName:  {authtypes.Minter, authtypes.Burner},
 }
 
 // GetMaccPerms returns a copy of the module account permissions.

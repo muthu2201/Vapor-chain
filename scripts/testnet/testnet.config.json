@@ -27,6 +27,7 @@
   "usdc_erc20": "0xb235A1c5b84eaEe836DC48DFD50325190371303F",
   "faucet_accounts": [],
   "block_max_gas": "40000000",
+  "gas_burn_bps": 10000,
   "guardian_pause_max_blocks": "300",
   "epoch_length_blocks": "3600",
   "voting_period": "172800s",

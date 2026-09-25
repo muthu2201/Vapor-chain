@@ -126,6 +126,7 @@ cmd_init() {
     | .app_state.settle.params.relayer_payout_cap = [{denom:"uusdc", amount:"1000000000"}]
     | .app_state.settle.params.sponsored_senders = [$bhex]
     | .app_state.settle.params.validator_payout_interval_blocks = "50"
+    | .app_state.settle.params.gas_burn_bps = 10000
     | .app_state.settle.params.assets = [{
         denom:"uusdc", enabled:true, symbol:"USDC", decimals:6,
         min_fee:"2000", max_fee:"5000000", micro_threshold:"250000",

@@ -65,6 +65,13 @@ message Params {
   bool credits_enabled = 11;
   // max_tab_age_blocks: tabs older than this may be force-settled by anyone.
   int64 max_tab_age_blocks = 12;
+  // gas_burn_bps: fraction (basis points) of EVM gas fees (acredit) burned
+  // every block before validator distribution. Burning makes the gas credit a
+  // deflationary, bought-and-consumed compute voucher: circulating supply must
+  // be replenished via BuyCredits (USDC -> treasury), so ALL chain activity —
+  // registered or not — continuously converts to protocol revenue. 10000 = burn
+  // 100% (validators are compensated from the USDC validator pool instead).
+  uint32 gas_burn_bps = 13;
 }
 
 // Tab is an escrowed micro-payment session.

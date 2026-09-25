@@ -33,6 +33,7 @@ var (
 	_ module.HasConsensusVersion = AppModule{}
 	_ appmodule.AppModule        = AppModule{}
 	_ appmodule.HasEndBlocker    = AppModule{}
+	_ appmodule.HasBeginBlocker  = AppModule{}
 )
 
 type AppModule struct {
@@ -88,6 +89,10 @@ func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.Raw
 		panic(err)
 	}
 	return cdc.MustMarshalJSON(gs)
+}
+
+func (am AppModule) BeginBlock(ctx context.Context) error {
+	return am.keeper.BeginBlock(sdk.UnwrapSDKContext(ctx))
 }
 
 func (am AppModule) EndBlock(ctx context.Context) error {

@@ -170,6 +170,17 @@ sponsored txs by **recovering the signer from the signature** — unspoofable).
 - `evm_version = prague` (solc 0.8.37). Osaka is not enabled.
 - Fee floor: min gas price `1 gwei` (`1e9 acredit`), feemarket base fee/min
   1e9. Verified: sub-floor spam is rejected at mempool entry.
+- **Gas is a bought-and-burned compute voucher.** `x/settle` runs a begin-blocker
+  (ordered *before* `x/distribution`) that burns a governance-set fraction
+  (`gas_burn_bps`, default 100%) of the previous block's gas fees from the fee
+  collector. *Why:* `acredit` is minted only by `buyCredits` (USDC → treasury)
+  and can never be sold back (`SendEnabled=false`); burning what is spent forces
+  circulating supply to be replenished by more USDC purchases, so **all** compute
+  on the chain — registered app or independent deployment — funnels into treasury
+  demand. Validators are paid from the USDC validator pool, not gas, so the burn
+  costs them nothing, and it can only *lower* supply so the `supply ≤ genesis +
+  minted` invariant is preserved. Full rationale and the drain audit behind it:
+  `docs/security/hardening.md`.
 - **Block-STM** (parallel EVM execution) is opt-in via `app.toml [vaporchain]
   block-stm` (default off) — correctness-first default, throughput when you want
   it.

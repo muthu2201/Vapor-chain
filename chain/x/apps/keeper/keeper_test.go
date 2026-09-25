@@ -194,3 +194,36 @@ func TestRevokedAppLosesAttribution(t *testing.T) {
 	require.False(t, ok)
 	require.ErrorIs(t, k.SetAppStatus(e.Ctx, id, types.APP_STATUS_ACTIVE), types.ErrAppInactive, "revocation is final")
 }
+
+// TestContractMoveDroppedWhenDestinationFull proves the finalize-time cap check:
+// a scheduled move must not push the destination app over MaxContractsPerApp if
+// the app filled up between scheduling and unlock.
+func TestContractMoveDroppedWhenDestinationFull(t *testing.T) {
+	e := testutil.Setup(t, 2)
+	k := e.App.AppsKeeper
+	p := k.GetParams(e.Ctx)
+	p.MaxContractsPerApp = 1
+	require.NoError(t, k.SetParams(e.Ctx, p))
+	owner := e.Accounts[0]
+	a1, _ := k.RegisterApp(e.Ctx, owner, "", "", "", 0)
+	a2, _ := k.RegisterApp(e.Ctx, owner, "", "", "", 0)
+	proof := types.OwnershipProof{Type: types.PROOF_TYPE_DEPLOYER_CREATE}
+	c := create(owner, 0)
+	_, _, err := k.AddContract(e.Ctx, owner, a1, c.Hex(), proof)
+	require.NoError(t, err)
+	// schedule the move a1 -> a2 (a2 empty, cap ok at schedule time)
+	pending, unlock, err := k.AddContract(e.Ctx, owner, a2, c.Hex(), types.OwnershipProof{Type: types.PROOF_TYPE_DEPLOYER_CREATE})
+	require.NoError(t, err)
+	require.True(t, pending)
+	// now fill a2 to the cap with a different contract
+	c2 := create(owner, 1)
+	_, _, err = k.AddContract(e.Ctx, owner, a2, c2.Hex(), types.OwnershipProof{Type: types.PROOF_TYPE_DEPLOYER_CREATE, Nonce: 1})
+	require.NoError(t, err)
+	// mature the move: it must be DROPPED, not exceed the cap
+	e.Ctx = e.Ctx.WithBlockHeight(unlock)
+	require.NoError(t, k.EndBlock(e.Ctx))
+	app, _ := k.AppOfContract(e.Ctx, c)
+	require.Equal(t, a1, app.AppId, "contract must stay with its current app when the destination is full")
+	a2app, _ := k.GetApp(e.Ctx, a2)
+	require.Equal(t, uint32(1), a2app.ContractCount, "destination must not exceed the cap")
+}

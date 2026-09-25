@@ -29,6 +29,7 @@ func DefaultParams() Params {
 		ValidatorPayoutIntervalBlocks: 86_400,
 		CreditsEnabled:                true,
 		MaxTabAgeBlocks:               604_800,
+		GasBurnBps:                    MaxBps, // burn 100% of gas fees by default
 		RelayerRecipients:             []string{},
 		RelayerPayoutCap:              sdk.Coins{},
 	}
@@ -135,6 +136,9 @@ func (p Params) Validate() error {
 	}
 	if p.MaxTabAgeBlocks < 1 {
 		return ErrInvalidParams.Wrap("max_tab_age_blocks must be >= 1")
+	}
+	if p.GasBurnBps > MaxBps {
+		return ErrInvalidParams.Wrapf("gas_burn_bps > %d", MaxBps)
 	}
 	return nil
 }

@@ -61,7 +61,7 @@ cmd_prepare() {
     --arg gt "$gt" --arg cid "$CID" --argjson adm "$adm" \
     --arg admin "$(cfg .admin)" --argjson guardians "$guardians" --argjson attestors "$attestors" \
     --argjson relayers "$relayers" --argjson sponsored "$sponsored" \
-    --arg tusdc "$(cfg .usdc_erc20)" --arg maxgas "$(cfg .block_max_gas)" \
+    --arg tusdc "$(cfg .usdc_erc20)" --arg maxgas "$(cfg .block_max_gas)" --arg burn "$(cfg .gas_burn_bps)" \
     --arg gpmax "$(cfg .guardian_pause_max_blocks)" --arg epoch "$(cfg .epoch_length_blocks)" \
     --arg vote "$(cfg .voting_period)" --arg xvote "$(cfg .expedited_voting_period)" \
     --arg dep "$(cfg .max_deposit_period)" --arg regfee "$(cfg .registration_fee_credit)" '
@@ -81,6 +81,7 @@ cmd_prepare() {
     | .app_state.settle.params.relayer_payout_cap = [{denom:"'"$USDC"'", amount:"1000000000"}]
     | .app_state.settle.params.sponsored_senders = $sponsored
     | .app_state.settle.params.validator_payout_interval_blocks = "600"
+    | .app_state.settle.params.gas_burn_bps = ($burn | tonumber)
     | .app_state.settle.params.assets = [{
         denom:"'"$USDC"'", enabled:true, symbol:"USDC", decimals:6,
         min_fee:"2000", max_fee:"5000000", micro_threshold:"250000",
