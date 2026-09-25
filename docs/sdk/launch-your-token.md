@@ -27,7 +27,7 @@ const predicted = await client.tokens.predict(account.address, params) // show i
 const { token } = await client.tokens.launch(params)                   // token === predicted
 ```
 
-Gasless launch (paid by a launchpad app's quota):
+Gasless launch (paid by a launchpad app's quota — the launchpad must be domain-verified or have earned quota):
 `client.tokens.launch(params, { sponsored: true })`, or the
 `useLaunchToken({ sponsored: true })` hook. In React,
 `usePredictedTokenAddress(params)` gives the live predicted address as the user

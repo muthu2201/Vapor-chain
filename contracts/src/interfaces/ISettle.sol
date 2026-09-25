@@ -62,6 +62,10 @@ interface ISettle {
     function claimRegistration(uint64 appId) external returns (bool);
     /// @notice App owner (msg.sender) accepts a contract's pending claim.
     function acceptContractClaim(uint64 appId, address contractAddr) external returns (bool pending);
+    /// @notice App owner (msg.sender) sets the domain protocol attestors verify. Protocol-sponsored
+    ///         base gas is only granted to domain-verified apps; changing the domain resets
+    ///         verification. Returns whether the app is currently verified (always false after a change).
+    function setAppDomain(uint64 appId, string calldata domain) external returns (bool verified);
     function appOf(address contractAddr) external view returns (uint64 appId, bool active);
 
     // ------------------------------------------------------------------- revenue
