@@ -48,19 +48,26 @@ ensure_postgres() {
     log "postgres already running on :$PG_PORT"
   else
     local b; b=$(pg_bin)
-    if [[ ! -f "$PG_DATA/PG_VERSION" ]]; then
-      log "initialising postgres in $PG_DATA"
-      mkdir -p "$PG_DATA"
-      # trust auth on a unix socket bound to localhost only: dev use
-      "$b/initdb" -D "$PG_DATA" -A trust -U postgres >/dev/null
-    fi
-    # postgres refuses to run as root; the container user may be root
+    mkdir -p "$PG_DATA"
+    local pgstart="$b/pg_ctl -D '$PG_DATA' -l '$LOGS/postgres.log' -o '-p $PG_PORT -k $PG_SOCK -c listen_addresses=localhost' -w start"
+    # postgres (initdb AND the server) refuse to run as root; the container
+    # user may be root, so run BOTH as the 'postgres' OS user in that case.
+    # initdb must never run as root either, so it lives inside these branches.
     if [[ $(id -u) -eq 0 ]]; then
       id postgres >/dev/null 2>&1 || die "running as root needs a 'postgres' OS user"
-      chown -R postgres "$PG_DATA"
-      su postgres -c "$b/pg_ctl -D '$PG_DATA' -l '$LOGS/postgres.log' -o '-p $PG_PORT -k $PG_SOCK -c listen_addresses=localhost' -w start" >/dev/null
+      chown -R postgres "$PG_DATA"; chown postgres "$LOGS"
+      if [[ ! -f "$PG_DATA/PG_VERSION" ]]; then
+        log "initialising postgres in $PG_DATA"
+        # trust auth on a unix socket bound to localhost only: dev use
+        su postgres -c "$b/initdb -D '$PG_DATA' -A trust -U postgres" >/dev/null
+      fi
+      su postgres -c "$pgstart" >/dev/null
     else
-      "$b/pg_ctl" -D "$PG_DATA" -l "$LOGS/postgres.log" -o "-p $PG_PORT -k $PG_SOCK -c listen_addresses=localhost" -w start >/dev/null
+      if [[ ! -f "$PG_DATA/PG_VERSION" ]]; then
+        log "initialising postgres in $PG_DATA"
+        "$b/initdb" -D "$PG_DATA" -A trust -U postgres >/dev/null
+      fi
+      eval "$pgstart" >/dev/null
     fi
     log "postgres started on :$PG_PORT"
   fi
