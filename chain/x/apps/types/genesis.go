@@ -7,6 +7,8 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 func DefaultGenesisState() *GenesisState {
@@ -42,6 +44,24 @@ func (gs GenesisState) Validate() error {
 		seen[c] = true
 		if !ids[b.AppId] {
 			return fmt.Errorf("binding %s references unknown app %d", c, b.AppId)
+		}
+	}
+	bonded := map[uint64]bool{}
+	for _, b := range gs.Bonds {
+		if !ids[b.AppId] || bonded[b.AppId] {
+			return fmt.Errorf("bond for unknown or duplicate app %d", b.AppId)
+		}
+		bonded[b.AppId] = true
+		if b.Amount.IsNil() || !b.Amount.IsPositive() {
+			return fmt.Errorf("bond for app %d must be positive", b.AppId)
+		}
+	}
+	for _, u := range gs.Unbondings {
+		if _, err := sdk.AccAddressFromBech32(u.Owner); err != nil {
+			return fmt.Errorf("unbonding owner %q: %w", u.Owner, err)
+		}
+		if u.Amount.IsNil() || !u.Amount.IsPositive() {
+			return fmt.Errorf("unbonding for app %d must be positive", u.AppId)
 		}
 	}
 	return nil

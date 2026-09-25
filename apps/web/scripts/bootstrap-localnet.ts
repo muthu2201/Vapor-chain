@@ -102,26 +102,14 @@ async function launchpad(): Promise<bigint> {
   return appId
 }
 
-// Protocol-sponsored gas is granted only to domain-verified apps: the owner
-// sets the domain (Settle.setAppDomain) and the localnet attestor confirms it.
-async function ensureVerified(appId: bigint, domain: string): Promise<void> {
-  if ((await rest.get(appId)).domainVerified) return
-  await client.apps.setDomain(appId, domain)
-  const out = execFileSync(
-    bin,
-    [
-      'tx', 'apps', 'attest-domain', appId.toString(), domain,
-      '--from', 'attestor', '--keyring-backend', 'test', '--home', resolve(net, 'node0'),
-      '--chain-id', 'vapor-local-1', '--node', 'tcp://127.0.0.1:26657',
-      '--gas', 'auto', '--gas-adjustment', '1.5', '--gas-prices', '1000000000acredit', '-y', '-o', 'json',
-    ],
-    { encoding: 'utf8' },
-  )
-  const { code, raw_log } = JSON.parse(out) as { code: number; raw_log: string }
-  if (code !== 0) throw new Error(`attest-domain failed: ${raw_log}`)
-  for (let i = 0; i < 30 && !(await rest.get(appId)).domainVerified; i++) await new Promise((r) => setTimeout(r, 500))
-  if (!(await rest.get(appId)).domainVerified) throw new Error(`app ${appId} was not verified`)
-  console.log(`app ${appId}: domain ${domain} verified`)
+// Protocol-sponsored base gas is bought with capital bonded behind the app
+// (linear in the bond, no identity checks): bond some test USDC once.
+async function ensureBonded(appId: bigint, amount = 10_000_000_000n): Promise<void> {
+  if ((await client.apps.bondInfo(appId)).bonded > 0n) return
+  await client.apps.bond(appId, amount)
+  for (let i = 0; i < 30 && (await rest.quota(appId)).gas === 0n; i++) await new Promise((r) => setTimeout(r, 500))
+  if ((await rest.quota(appId)).gas === 0n) throw new Error(`app ${appId} has no quota after bonding`)
+  console.log(`app ${appId}: bonded ${amount / 1_000_000n} USDC for base sponsorship quota`)
 }
 
 function faucetKey(): string {
@@ -137,8 +125,8 @@ function faucetKey(): string {
 
 const s = await shop()
 const lp = await launchpad()
-await ensureVerified(s.appId, 'shop.vapor.test')
-await ensureVerified(lp, 'launchpad.vapor.test')
+await ensureBonded(s.appId)
+await ensureBonded(lp)
 const env = {
   NEXT_PUBLIC_VAPOR_NETWORK_NAME: 'VaporChain Localnet',
   NEXT_PUBLIC_VAPOR_EVM_CHAIN_ID: String(chain.id),

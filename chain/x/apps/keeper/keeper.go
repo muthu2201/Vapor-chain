@@ -52,7 +52,8 @@ type Keeper struct {
 	PendingClaims collections.Map[collections.Pair[uint64, string], types.PendingClaim]
 	EpochStats    collections.Map[collections.Pair[uint64, uint64], types.EpochStats]
 	Quotas        collections.Map[uint64, types.Quota]
-	Attestations  collections.Map[collections.Pair[uint64, string], types.DomainAttestation]
+	Bonds         collections.Map[uint64, math.Int]
+	Unbondings    collections.Map[collections.Triple[int64, uint64, string], math.Int]
 	EpochNumber   collections.Item[uint64]
 	EpochStart    collections.Item[int64]
 }
@@ -86,7 +87,8 @@ func NewKeeper(
 		PendingClaims: collections.NewMap(sb, types.PendingClaimsKey, "pending_claims", collections.PairKeyCodec(collections.Uint64Key, collections.StringKey), codec.CollValue[types.PendingClaim](cdc)),
 		EpochStats:    collections.NewMap(sb, types.EpochStatsKey, "epoch_stats", collections.PairKeyCodec(collections.Uint64Key, collections.Uint64Key), codec.CollValue[types.EpochStats](cdc)),
 		Quotas:        collections.NewMap(sb, types.QuotasKey, "quotas", collections.Uint64Key, codec.CollValue[types.Quota](cdc)),
-		Attestations:  collections.NewMap(sb, types.AttestationsKey, "attestations", collections.PairKeyCodec(collections.Uint64Key, collections.StringKey), codec.CollValue[types.DomainAttestation](cdc)),
+		Bonds:         collections.NewMap(sb, types.BondsKey, "bonds", collections.Uint64Key, sdk.IntValue),
+		Unbondings:    collections.NewMap(sb, types.UnbondingsKey, "unbondings", collections.TripleKeyCodec(collections.Int64Key, collections.Uint64Key, collections.StringKey), sdk.IntValue),
 		EpochNumber:   collections.NewItem(sb, types.EpochNumberKey, "epoch_number", collections.Uint64Value),
 		EpochStart:    collections.NewItem(sb, types.EpochStartKey, "epoch_start", collections.Int64Value),
 	}
@@ -257,10 +259,7 @@ func (k Keeper) UpdateApp(ctx sdk.Context, owner string, appID uint64, recipient
 		return types.ErrInvalidField.Wrapf("referrer_bps %d > max %d", referrerBps, params.MaxReferrerBps)
 	}
 	app.MetadataUri = metadataURI
-	if domain != app.Domain {
-		app.Domain = domain
-		app.DomainVerified = false
-	}
+	app.Domain = domain
 	app.ReferrerBps = referrerBps
 	app.Version++
 	if err := k.Apps.Set(ctx, appID, app); err != nil {
@@ -572,42 +571,6 @@ func (k Keeper) finalizeMoves(ctx sdk.Context) error {
 	return nil
 }
 
-func (k Keeper) AttestDomain(ctx sdk.Context, attestor string, appID uint64, domain string) (bool, error) {
-	params := k.GetParams(ctx)
-	if !params.IsAttestor(attestor) {
-		return false, types.ErrNotAttestor
-	}
-	app, err := k.GetApp(ctx, appID)
-	if err != nil {
-		return false, err
-	}
-	if app.Domain == "" || app.Domain != domain {
-		return false, types.ErrDomainMismatch
-	}
-	if err := k.Attestations.Set(ctx, collections.Join(appID, attestor), types.DomainAttestation{AppId: appID, Domain: domain, Attestor: attestor, Height: ctx.BlockHeight()}); err != nil {
-		return false, err
-	}
-	var count uint32
-	err = k.Attestations.Walk(ctx, collections.NewPrefixedPairRange[uint64, string](appID), func(_ collections.Pair[uint64, string], a types.DomainAttestation) (bool, error) {
-		if a.Domain == app.Domain && params.IsAttestor(a.Attestor) {
-			count++
-		}
-		return false, nil
-	})
-	if err != nil {
-		return false, err
-	}
-	if count >= params.AttestationThreshold && !app.DomainVerified {
-		app.DomainVerified = true
-		if err := k.Apps.Set(ctx, appID, app); err != nil {
-			return false, err
-		}
-		ctx.EventManager().EmitEvent(sdk.NewEvent("app_domain_verified",
-			sdk.NewAttribute("app_id", fmt.Sprint(appID)), sdk.NewAttribute("domain", domain)))
-	}
-	return app.DomainVerified, nil
-}
-
 func (k Keeper) SetAppStatus(ctx sdk.Context, appID uint64, status types.AppStatus) error {
 	if status == types.APP_STATUS_UNSPECIFIED {
 		return types.ErrInvalidField.Wrap("status unspecified")
@@ -679,8 +642,8 @@ func (k Keeper) RecordSettlement(ctx sdk.Context, appID uint64, payer []byte, fe
 
 // ComputeQuota applies:  quota = min(max, base + fee_weight * diversity)
 // where diversity = min(1, unique_payers * diversity_target / payments) and
-// base is BaseGasPerEpoch only for a domain-verified app (see BaseQuota).
-func ComputeQuota(params types.Params, st types.EpochStats, verified bool) types.Quota {
+// base is what the app's bond buys (see BaseQuota).
+func ComputeQuota(params types.Params, st types.EpochStats, base uint64) types.Quota {
 	unique := types.HLLEstimate(st.Hll)
 	if unique > st.Payments {
 		unique = st.Payments
@@ -693,7 +656,7 @@ func ComputeQuota(params types.Params, st types.EpochStats, verified bool) types
 		}
 	}
 	earned := st.FeeWeight.Mul(math.NewIntFromUint64(diversityBps)).Quo(math.NewInt(types.MaxBps))
-	total := math.NewIntFromUint64(BaseQuota(params, verified)).Add(earned)
+	total := math.NewIntFromUint64(base).Add(earned)
 	maxQ := math.NewIntFromUint64(params.MaxGasPerEpoch)
 	if total.GT(maxQ) {
 		total = maxQ
@@ -701,18 +664,183 @@ func ComputeQuota(params types.Params, st types.EpochStats, verified bool) types
 	return types.Quota{AppId: st.AppId, Gas: total.Uint64(), UniquePayersEstimate: unique, DiversityBps: uint32(diversityBps)} //nolint:gosec // <= 10000
 }
 
-// BaseQuota is the protocol-sponsored gas an app gets per epoch without having
-// paid any fees. It is granted ONLY to domain-verified apps: registration is
-// cheap and permissionless, so an unconditional base would let anyone mint
-// fake apps and have the protocol paymaster pay for their gas (the Sybil gap
-// measured in docs/benchmarks/mainnet-sim.md, F-1). Verification is done by
-// governance-appointed attestors, which is the anti-Sybil gate. Unverified
-// apps still earn quota from the fees their contracts generate.
-func BaseQuota(params types.Params, verified bool) uint64 {
-	if !verified {
+// BondUnit is the number of base units of bond_denom that
+// Params.GasPerBondedUnit is quoted per (1 USDC for a 6-decimal token).
+const BondUnit = 1_000_000
+
+// BaseQuota is the sponsored gas an app gets per epoch without having paid any
+// fees, bought with capital it keeps locked: bonded / BondUnit ×
+// GasPerBondedUnit, capped at MaxGasPerEpoch. There is no identity check and
+// no human gatekeeper. It is Sybil-proof by construction because it is LINEAR
+// in capital: one bond of X gets exactly what N fake apps sharing X get, so
+// registering fakes buys nothing (docs/benchmarks/mainnet-sim.md, F-1).
+// Unbonding locks the capital for UnbondingBlocks, so it cannot be bonded for
+// an epoch of quota and pulled straight back out.
+func BaseQuota(params types.Params, bonded math.Int) uint64 {
+	if params.BondDenom == "" || bonded.IsNil() || !bonded.IsPositive() {
 		return 0
 	}
-	return params.BaseGasPerEpoch
+	gas := bonded.Mul(math.NewIntFromUint64(params.GasPerBondedUnit)).Quo(math.NewInt(BondUnit))
+	if gas.GT(math.NewIntFromUint64(params.MaxGasPerEpoch)) {
+		return params.MaxGasPerEpoch
+	}
+	return gas.Uint64()
+}
+
+// BondInfo returns an app's bonded capital and the base quota it buys.
+func (k Keeper) BondInfo(ctx sdk.Context, appID uint64) (math.Int, uint64) {
+	bonded := k.BondOf(ctx, appID)
+	return bonded, BaseQuota(k.GetParams(ctx), bonded)
+}
+
+// BondOf is the capital currently bonded behind an app (in params.bond_denom).
+func (k Keeper) BondOf(ctx sdk.Context, appID uint64) math.Int {
+	v, err := k.Bonds.Get(ctx, appID)
+	if err != nil {
+		return math.ZeroInt()
+	}
+	return v
+}
+
+// BondApp locks the owner's capital behind the app. Owner-only, active apps.
+func (k Keeper) BondApp(ctx sdk.Context, owner string, appID uint64, amount sdk.Coin) error {
+	params := k.GetParams(ctx)
+	if params.BondDenom == "" {
+		return types.ErrBondingDisabled
+	}
+	if amount.Denom != params.BondDenom || amount.Amount.IsNil() || !amount.Amount.IsPositive() {
+		return types.ErrInvalidBond.Wrapf("bond must be a positive amount of %s", params.BondDenom)
+	}
+	app, err := k.ownedApp(ctx, owner, appID)
+	if err != nil {
+		return err
+	}
+	if app.Status != types.APP_STATUS_ACTIVE {
+		return types.ErrAppInactive
+	}
+	from, err := sdk.AccAddressFromBech32(owner)
+	if err != nil {
+		return types.ErrUnauthorized.Wrap(err.Error())
+	}
+	if err := k.bankKeeper.SendCoinsFromAccountToModule(ctx, from, types.ModuleName, sdk.NewCoins(amount)); err != nil {
+		return err
+	}
+	bonded := k.BondOf(ctx, appID).Add(amount.Amount)
+	if err := k.Bonds.Set(ctx, appID, bonded); err != nil {
+		return err
+	}
+	ctx.EventManager().EmitEvent(sdk.NewEvent("app_bonded",
+		sdk.NewAttribute("app_id", fmt.Sprint(appID)), sdk.NewAttribute("amount", amount.String()),
+		sdk.NewAttribute("bonded", bonded.String()), sdk.NewAttribute("base_gas", fmt.Sprint(BaseQuota(params, bonded)))))
+	return nil
+}
+
+// UnbondApp stops `amount` counting toward base quota now and returns it to
+// the owner after params.UnbondingBlocks. Allowed for inactive apps too, so a
+// suspended or revoked app's owner can always get their capital back.
+func (k Keeper) UnbondApp(ctx sdk.Context, owner string, appID uint64, amount sdk.Coin) (int64, error) {
+	params := k.GetParams(ctx)
+	if params.BondDenom == "" {
+		return 0, types.ErrBondingDisabled
+	}
+	if amount.Denom != params.BondDenom || amount.Amount.IsNil() || !amount.Amount.IsPositive() {
+		return 0, types.ErrInvalidBond.Wrapf("unbond a positive amount of %s", params.BondDenom)
+	}
+	// not ownedApp: that refuses revoked apps, and a revoked app's owner must
+	// still be able to take their capital back
+	app, err := k.GetApp(ctx, appID)
+	if err != nil {
+		return 0, err
+	}
+	if app.Owner != owner {
+		return 0, types.ErrUnauthorized.Wrapf("signer %s does not own app %d", owner, appID)
+	}
+	bonded := k.BondOf(ctx, appID)
+	if amount.Amount.GT(bonded) {
+		return 0, types.ErrInsufficientBond.Wrapf("bonded %s, unbonding %s", bonded, amount.Amount)
+	}
+	left := bonded.Sub(amount.Amount)
+	if left.IsZero() {
+		err = k.Bonds.Remove(ctx, appID)
+	} else {
+		err = k.Bonds.Set(ctx, appID, left)
+	}
+	if err != nil {
+		return 0, err
+	}
+	release := ctx.BlockHeight() + params.UnbondingBlocks
+	key := collections.Join3(release, appID, owner)
+	pending, err := k.Unbondings.Get(ctx, key)
+	if err != nil {
+		pending = math.ZeroInt()
+	}
+	if err := k.Unbondings.Set(ctx, key, pending.Add(amount.Amount)); err != nil {
+		return 0, err
+	}
+	ctx.EventManager().EmitEvent(sdk.NewEvent("app_unbonding",
+		sdk.NewAttribute("app_id", fmt.Sprint(appID)), sdk.NewAttribute("owner", owner),
+		sdk.NewAttribute("amount", amount.String()), sdk.NewAttribute("release_height", fmt.Sprint(release))))
+	return release, nil
+}
+
+// releaseUnbondings pays out every unbonding whose release height has come.
+// A failed payout is logged and retried next block; it never halts the chain.
+func (k Keeper) releaseUnbondings(ctx sdk.Context) error {
+	denom := k.GetParams(ctx).BondDenom
+	iter, err := k.Unbondings.Iterate(ctx, nil)
+	if err != nil {
+		return err
+	}
+	type due struct {
+		key    collections.Triple[int64, uint64, string]
+		amount math.Int
+	}
+	var ready []due
+	for ; iter.Valid(); iter.Next() {
+		kv, err := iter.KeyValue()
+		if err != nil {
+			iter.Close()
+			return err
+		}
+		if kv.Key.K1() > ctx.BlockHeight() {
+			break // keys are ordered by release height
+		}
+		ready = append(ready, due{kv.Key, kv.Value})
+	}
+	iter.Close()
+	for _, d := range ready {
+		to, err := sdk.AccAddressFromBech32(d.key.K3())
+		if err == nil {
+			err = k.bankKeeper.SendCoinsFromModuleToAccount(ctx, types.ModuleName, to, sdk.NewCoins(sdk.NewCoin(denom, d.amount)))
+		}
+		if err != nil {
+			ctx.Logger().With("module", "x/"+types.ModuleName).Error("unbonding payout failed; will retry", "app_id", d.key.K2(), "owner", d.key.K3(), "err", err)
+			continue
+		}
+		if err := k.Unbondings.Remove(ctx, d.key); err != nil {
+			return err
+		}
+		ctx.EventManager().EmitEvent(sdk.NewEvent("app_unbonded",
+			sdk.NewAttribute("app_id", fmt.Sprint(d.key.K2())), sdk.NewAttribute("owner", d.key.K3()),
+			sdk.NewAttribute("amount", sdk.NewCoin(denom, d.amount).String())))
+	}
+	return nil
+}
+
+// BondedTotal is Σ bonds + Σ unbondings: what the module account must hold.
+func (k Keeper) BondedTotal(ctx sdk.Context) (math.Int, error) {
+	total := math.ZeroInt()
+	if err := k.Bonds.Walk(ctx, nil, func(_ uint64, v math.Int) (bool, error) {
+		total = total.Add(v)
+		return false, nil
+	}); err != nil {
+		return total, err
+	}
+	err := k.Unbondings.Walk(ctx, nil, func(_ collections.Triple[int64, uint64, string], v math.Int) (bool, error) {
+		total = total.Add(v)
+		return false, nil
+	})
+	return total, err
 }
 
 // QuotaFor returns the app's quota for the current epoch (its base quota if it
@@ -727,7 +855,7 @@ func (k Keeper) QuotaFor(ctx sdk.Context, appID uint64) types.Quota {
 	if err == nil && q.Epoch == epoch {
 		return q
 	}
-	return types.Quota{AppId: appID, Epoch: epoch, Gas: BaseQuota(k.GetParams(ctx), app.DomainVerified)}
+	return types.Quota{AppId: appID, Epoch: epoch, Gas: BaseQuota(k.GetParams(ctx), k.BondOf(ctx, appID))}
 }
 
 // rolloverEpoch finalizes quotas from the ending epoch's stats and prunes
@@ -744,7 +872,7 @@ func (k Keeper) rolloverEpoch(ctx sdk.Context) error {
 		if err != nil || app.Status != types.APP_STATUS_ACTIVE {
 			return false, nil
 		}
-		q := ComputeQuota(params, st, app.DomainVerified)
+		q := ComputeQuota(params, st, BaseQuota(params, k.BondOf(ctx, st.AppId)))
 		q.Epoch = next
 		return false, k.Quotas.Set(ctx, st.AppId, q)
 	})
@@ -773,9 +901,13 @@ func (k Keeper) rolloverEpoch(ctx sdk.Context) error {
 	return nil
 }
 
-// EndBlock finalizes due contract moves and rolls the quota epoch.
+// EndBlock finalizes due contract moves, releases matured unbondings and
+// rolls the quota epoch.
 func (k Keeper) EndBlock(ctx sdk.Context) error {
 	if err := k.finalizeMoves(ctx); err != nil {
+		return err
+	}
+	if err := k.releaseUnbondings(ctx); err != nil {
 		return err
 	}
 	return k.rolloverEpoch(ctx)

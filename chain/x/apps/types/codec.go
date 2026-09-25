@@ -20,7 +20,8 @@ func RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
 	legacy.RegisterAminoMsg(cdc, &MsgAcceptContractClaim{}, "vapor/apps/MsgAcceptContractClaim")
 	legacy.RegisterAminoMsg(cdc, &MsgRemoveContract{}, "vapor/apps/MsgRemoveContract")
 	legacy.RegisterAminoMsg(cdc, &MsgCancelContractMove{}, "vapor/apps/MsgCancelContractMove")
-	legacy.RegisterAminoMsg(cdc, &MsgAttestDomain{}, "vapor/apps/MsgAttestDomain")
+	legacy.RegisterAminoMsg(cdc, &MsgBondApp{}, "vapor/apps/MsgBondApp")
+	legacy.RegisterAminoMsg(cdc, &MsgUnbondApp{}, "vapor/apps/MsgUnbondApp")
 	legacy.RegisterAminoMsg(cdc, &MsgSetAppStatus{}, "vapor/apps/MsgSetAppStatus")
 	legacy.RegisterAminoMsg(cdc, &MsgUpdateParams{}, "vapor/apps/MsgUpdateParams")
 	cdc.RegisterConcrete(&Params{}, "vapor/x/apps/Params", nil)
@@ -30,7 +31,7 @@ func RegisterInterfaces(registry codectypes.InterfaceRegistry) {
 	registry.RegisterImplementations((*sdk.Msg)(nil),
 		&MsgRegisterApp{}, &MsgUpdateApp{}, &MsgTransferOwnership{}, &MsgAcceptOwnership{},
 		&MsgAddContract{}, &MsgAcceptContractClaim{}, &MsgRemoveContract{}, &MsgCancelContractMove{},
-		&MsgAttestDomain{}, &MsgSetAppStatus{}, &MsgUpdateParams{},
+		&MsgBondApp{}, &MsgUnbondApp{}, &MsgSetAppStatus{}, &MsgUpdateParams{},
 	)
 	msgservice.RegisterMsgServiceDesc(registry, &_Msg_serviceDesc)
 }

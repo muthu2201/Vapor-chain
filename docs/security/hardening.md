@@ -77,9 +77,13 @@ The core money paths were found **sound**; they are documented here so the
   (Those figures used the localnet's 60-block epoch; production epochs are
   86,400 blocks, so the per-app leak is ~1,440× slower — but still unbounded,
   and it grows with any repricing of gas.)
-  **FIXED (economics v2):** base quota is now granted only to domain-verified
-  apps (`keeper.BaseQuota`; `TestBaseQuotaOnlyForVerifiedApps`). Measured live:
-  three fresh registrations get **0** sponsored gas and the sponsor refuses them.
+  **FIXED.** v2 gated base quota on domain verification by governance-appointed
+  attestors; v3 removed that human gate. Base quota is now bought with capital
+  bonded behind the app and is linear in it (`keeper.BaseQuota`,
+  `TestBondedBaseQuota`), so splitting capital across fake apps gains nothing,
+  with no attestors, biometrics or documents. Measured live: fresh apps get **0**
+  and are refused; one bond split over two apps buys exactly what one app gets.
+  See `docs/security/sybil-resistance.md`.
 
 **Conclusion of the drain audit:** value into `x/settle` is conserved on every
 path, and no attribution loophole lets one party drain another's balance. The

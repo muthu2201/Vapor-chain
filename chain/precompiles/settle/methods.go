@@ -428,30 +428,62 @@ func (p Precompile) acceptContractClaim(ctx sdk.Context, caller common.Address, 
 	return method.Outputs.Pack(pending)
 }
 
-// setAppDomain(appId, domain): owner-only. Keeps every other app field and
-// resets verification when the domain changes (x/apps UpdateApp), so an app
-// cannot carry a verified status over to a domain nobody attested.
-func (p Precompile) setAppDomain(ctx sdk.Context, caller common.Address, method *abi.Method, args []interface{}) ([]byte, error) {
+// bondApp(appId, token, amount): the app owner (msg.sender) locks capital
+// behind the app; base sponsorship quota is linear in it (x/apps BaseQuota).
+func (p Precompile) bondApp(ctx sdk.Context, caller common.Address, method *abi.Method, args []interface{}) ([]byte, error) {
+	appID, coin, err := p.bondArgs(ctx, args)
+	if err != nil {
+		return nil, err
+	}
+	if err := p.apps.BondApp(ctx, acc(caller).String(), appID, coin); err != nil {
+		return nil, err
+	}
+	bonded, _ := p.apps.BondInfo(ctx, appID)
+	return method.Outputs.Pack(bonded.BigInt())
+}
+
+// unbondApp(appId, token, amount): stops counting now; released to the owner
+// after the unbonding period. Returns the release height.
+func (p Precompile) unbondApp(ctx sdk.Context, caller common.Address, method *abi.Method, args []interface{}) ([]byte, error) {
+	appID, coin, err := p.bondArgs(ctx, args)
+	if err != nil {
+		return nil, err
+	}
+	release, err := p.apps.UnbondApp(ctx, acc(caller).String(), appID, coin)
+	if err != nil {
+		return nil, err
+	}
+	return method.Outputs.Pack(uint64(release)) //nolint:gosec // block heights are positive
+}
+
+func (p Precompile) bondArgs(ctx sdk.Context, args []interface{}) (uint64, sdk.Coin, error) {
+	appID, err := argUint64(args, 0)
+	if err != nil {
+		return 0, sdk.Coin{}, err
+	}
+	token, err := argAddress(args, 1)
+	if err != nil {
+		return 0, sdk.Coin{}, err
+	}
+	amount, err := argAmount(args, 2)
+	if err != nil {
+		return 0, sdk.Coin{}, err
+	}
+	denom, err := p.denomOfToken(ctx, token)
+	if err != nil {
+		return 0, sdk.Coin{}, err
+	}
+	return appID, sdk.NewCoin(denom, amount), nil
+}
+
+// appBond(appId) view: bonded capital and the base quota it buys per epoch.
+func (p Precompile) appBond(ctx sdk.Context, method *abi.Method, args []interface{}) ([]byte, error) {
 	appID, err := argUint64(args, 0)
 	if err != nil {
 		return nil, err
 	}
-	domain, ok := args[1].(string)
-	if !ok {
-		return nil, fmt.Errorf("settle: invalid domain argument")
-	}
-	app, err := p.apps.GetApp(ctx, appID)
-	if err != nil {
-		return nil, err
-	}
-	if err := p.apps.UpdateApp(ctx, acc(caller).String(), appID, "", app.MetadataUri, domain, app.ReferrerBps); err != nil {
-		return nil, err
-	}
-	updated, err := p.apps.GetApp(ctx, appID)
-	if err != nil {
-		return nil, err
-	}
-	return method.Outputs.Pack(updated.DomainVerified)
+	bonded, base := p.apps.BondInfo(ctx, appID)
+	return method.Outputs.Pack(bonded.BigInt(), base)
 }
 
 func (p Precompile) appOf(ctx sdk.Context, method *abi.Method, args []interface{}) ([]byte, error) {

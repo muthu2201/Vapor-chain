@@ -12,10 +12,18 @@ export interface AppRecord {
   revenueRecipient: string
   metadataUri: string
   domain: string
-  domainVerified: boolean
   referrerBps: number
   status: 'APP_STATUS_ACTIVE' | 'APP_STATUS_PAUSED' | 'APP_STATUS_REVOKED' | string
   contractCount: number
+}
+
+export interface AppBond {
+  denom: string
+  /** capital locked behind the app (base units of `denom`) */
+  bonded: bigint
+  /** base sponsorship quota it buys, in gas per epoch */
+  baseGas: bigint
+  unbonding: { owner: string; amount: bigint; releaseHeight: bigint }[]
 }
 
 export interface Quota {
@@ -39,10 +47,20 @@ export function appsRest(restUrl: string) {
         revenueRecipient: a.revenue_recipient as string,
         metadataUri: (a.metadata_uri as string) ?? '',
         domain: (a.domain as string) ?? '',
-        domainVerified: Boolean(a.domain_verified),
         referrerBps: Number(a.referrer_bps ?? 0),
         status: a.status as string,
         contractCount: Number(a.contract_count ?? 0),
+      }
+    },
+    async bond(appId: bigint): Promise<AppBond> {
+      const r = await fetchJson<{ denom: string; bonded: string; base_gas: string; unbonding?: { owner: string; amount: string; release_height: string }[] }>(
+        `${base}/vaporchain/apps/v1/apps/${appId}/bond`,
+      )
+      return {
+        denom: r.denom,
+        bonded: BigInt(r.bonded ?? 0),
+        baseGas: BigInt(r.base_gas ?? 0),
+        unbonding: (r.unbonding ?? []).map((u) => ({ owner: u.owner, amount: BigInt(u.amount), releaseHeight: BigInt(u.release_height) })),
       }
     },
     async quota(appId: bigint): Promise<Quota> {

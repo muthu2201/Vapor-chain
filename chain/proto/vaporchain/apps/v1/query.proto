@@ -2,6 +2,7 @@ syntax = "proto3";
 package vaporchain.apps.v1;
 
 import "gogoproto/gogo.proto";
+import "cosmos_proto/cosmos.proto";
 import "google/api/annotations.proto";
 import "cosmos/base/query/v1beta1/pagination.proto";
 import "vaporchain/apps/v1/apps.proto";
@@ -37,6 +38,9 @@ service Query {
   rpc CurrentEpoch(QueryCurrentEpochRequest) returns (QueryCurrentEpochResponse) {
     option (google.api.http).get = "/vaporchain/apps/v1/epoch";
   }
+  rpc Bond(QueryBondRequest) returns (QueryBondResponse) {
+    option (google.api.http).get = "/vaporchain/apps/v1/apps/{app_id}/bond";
+  }
 }
 
 message QueryParamsRequest {}
@@ -70,4 +74,16 @@ message QueryCurrentEpochResponse {
   uint64 epoch = 1;
   int64 started_at_height = 2;
   int64 ends_at_height = 3;
+}
+message QueryBondRequest { uint64 app_id = 1; }
+message QueryBondResponse {
+  string denom = 1;
+  string bonded = 2 [
+    (cosmos_proto.scalar) = "cosmos.Int",
+    (gogoproto.customtype) = "cosmossdk.io/math.Int",
+    (gogoproto.nullable) = false
+  ];
+  repeated Unbonding unbonding = 3 [ (gogoproto.nullable) = false ];
+  // base_gas is the base quota this bond is worth per epoch.
+  uint64 base_gas = 4;
 }

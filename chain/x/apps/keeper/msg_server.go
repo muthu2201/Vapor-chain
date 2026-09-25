@@ -84,12 +84,19 @@ func (m msgServer) CancelContractMove(goCtx context.Context, msg *types.MsgCance
 	return &types.MsgCancelContractMoveResponse{}, nil
 }
 
-func (m msgServer) AttestDomain(goCtx context.Context, msg *types.MsgAttestDomain) (*types.MsgAttestDomainResponse, error) {
-	ok, err := m.Keeper.AttestDomain(sdk.UnwrapSDKContext(goCtx), msg.Attestor, msg.AppId, msg.Domain)
+func (m msgServer) BondApp(goCtx context.Context, msg *types.MsgBondApp) (*types.MsgBondAppResponse, error) {
+	if err := m.Keeper.BondApp(sdk.UnwrapSDKContext(goCtx), msg.Owner, msg.AppId, msg.Amount); err != nil {
+		return nil, err
+	}
+	return &types.MsgBondAppResponse{}, nil
+}
+
+func (m msgServer) UnbondApp(goCtx context.Context, msg *types.MsgUnbondApp) (*types.MsgUnbondAppResponse, error) {
+	release, err := m.Keeper.UnbondApp(sdk.UnwrapSDKContext(goCtx), msg.Owner, msg.AppId, msg.Amount)
 	if err != nil {
 		return nil, err
 	}
-	return &types.MsgAttestDomainResponse{Verified: ok}, nil
+	return &types.MsgUnbondAppResponse{ReleaseHeight: release}, nil
 }
 
 func (m msgServer) SetAppStatus(goCtx context.Context, msg *types.MsgSetAppStatus) (*types.MsgSetAppStatusResponse, error) {
@@ -109,7 +116,14 @@ func (m msgServer) UpdateParams(goCtx context.Context, msg *types.MsgUpdateParam
 	if err := msg.Params.Validate(); err != nil {
 		return nil, err
 	}
-	if err := m.Params.Set(sdk.UnwrapSDKContext(goCtx), msg.Params); err != nil {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	// switching the bond denom would strand existing bonds in the old one
+	if msg.Params.BondDenom != m.GetParams(ctx).BondDenom {
+		if total, err := m.BondedTotal(ctx); err != nil || total.IsPositive() {
+			return nil, types.ErrInvalidParams.Wrap("bond_denom cannot change while bonds or unbondings exist")
+		}
+	}
+	if err := m.Params.Set(ctx, msg.Params); err != nil {
 		return nil, err
 	}
 	return &types.MsgUpdateParamsResponse{}, nil

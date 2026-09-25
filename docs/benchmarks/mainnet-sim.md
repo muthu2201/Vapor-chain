@@ -22,13 +22,14 @@ rather than a measurement, it says so.
 
 | area | result |
 |---|---|
-| Test matrix (CI jobs + live e2e + browser e2e) | **all green on v2** — 32 steps; 12 Go packages under `-race`, 26 Solidity tests, 35 TS unit tests, 15 protocol checks, 14 live SDK/React e2e tests (8 of them registry economics), 5 Playwright tests (§3). GitHub CI had been red on every push for two CI-config bugs, now fixed (F-8) |
+| Test matrix (CI jobs + live e2e + browser e2e) | **all green on v3, in one run (exit 0)** — 32 steps; 12 Go packages under `-race`, 26 Solidity tests, 35 TS unit tests, 15 protocol checks, 15 live SDK/React e2e tests (9 of them registry economics), 5 Playwright tests (§3). GitHub CI had been red on every push for two CI-config bugs, now fixed (F-8) |
 | Consensus under load | 4/4 validators in sync throughout; **0** consensus failures, **0** panics, **0** nil-prevotes / rejected proposals |
 | Sponsored-lane cap (50%) | **0.5000** max share per block, verified from the chain by recovered signer over 3,008 sponsored txs |
 | Fee floor (anti-spam) | **0 / 8,962** sub-floor txs admitted |
 | Gas-burn conservation | over 55,870 txs: supply burned **== fees paid, to the wei** (6.930291594214504 CREDIT) |
 | Settle invariants | no breach, no safe-mode pause, across the whole run |
 | Sustained throughput on this box | **~186 tps** comfortable (100% inclusion, p50 finality 0.8 s); **~250–275 tps** ceiling, set by CPU (see §4) |
+| Who decides which apps get free gas? | **Nobody (v3).** No attestors, biometrics, face ID or documents: base quota is bought with refundable USDC bonded behind the app and is linear in it, so fake apps gain nothing — live, one bond split over two apps bought exactly the same 25M gas as one app, and fresh apps got 0 (§5.5) |
 | Does going around the registry cost real money? | **Yes, with economics v2.** Every unsponsored transaction pays for its compute: an ERC-20 transfer costs **$0.0017** (was $3.4×10⁻⁸ at v1 prices). Users of registered, verified apps pay **$0**; fake apps get **0** sponsored gas; farming sponsorship returns at most $0.90 per $1 (§5) |
 | Findings | 8 total: 6 fixed (F-1, F-2, F-3, F-6, F-7, F-8), 2 open with recommendations (F-4, F-5) — §6 |
 
@@ -41,7 +42,7 @@ rather than a measurement, it says so.
 | Hardware | **one** VM, 4 vCPU Intel Xeon @ 2.10 GHz, 15 GB RAM — all 4 validators, sponsor, Alto bundler, indexer, Postgres and the load generator share it |
 | Chain | `vaporchaind` @ `82f8db1` (hardened build), Cosmos SDK 0.54.4, CometBFT 0.39.4, cosmos/evm 0.7.3, Go 1.26.8 |
 | Topology | 4 validators (PoA council admissions, real gentx/collect-gentxs genesis), app-side mempool, ~1 s blocks, 40M block gas |
-| Economics | fee 1% (min 0.002 / max 5 USDC), split app 50 / validators 20 / relayer 10 / treasury 20, `gas_burn_bps = 10000`, min gas price 1 gwei. **v1** (load campaign, §4): `credit_price` 1e15 (1 CREDIT = $0.001), `quota_weight` 1000, registration 10 CREDIT, base quota 2M gas to every app. **v2** (current genesis, §5): `credit_price` 2e10 (1 CREDIT = $50), `quota_weight` 2, registration 0.2 CREDIT, base quota 20M gas to verified apps only, sponsor fee cap 4 gwei. Localnet epoch = 60 blocks (production 86,400). Throughput and gas usage do not depend on the price |
+| Economics | fee 1% (min 0.002 / max 5 USDC), split app 50 / validators 20 / relayer 10 / treasury 20, `gas_burn_bps = 10000`, min gas price 1 gwei. **v1** (load campaign, §4): `credit_price` 1e15 (1 CREDIT = $0.001), `quota_weight` 1000, registration 10 CREDIT, base quota 2M gas to every app. **v2** (current genesis, §5): `credit_price` 2e10 (1 CREDIT = $50), `quota_weight` 2, registration 0.2 CREDIT, base quota 20M gas to verified apps only, sponsor fee cap 4 gwei. **v3** (current): as v2, but base quota comes from bonded USDC (`gas_per_bonded_unit` 2,500 gas/epoch per USDC, 21-day unbonding; localnet 120 blocks) and the attestor role is removed. Localnet epoch = 60 blocks (production 86,400). Throughput and gas usage do not depend on the price |
 | Off-chain | sponsor (ERC-7677) :8800, Alto bundler (ERC-4337 v0.8) :4337, indexer :8900, Postgres 16 |
 | Contracts | EntryPoint v0.8 + Simple7702Account at canonical addresses (CREATE2 replay), VaporVerifyingPaymaster, VaporTokenPaymaster, VaporTokenFactory |
 | Tooling | forge 1.8.3, Node 22.22, pnpm 12.6, Playwright + Chromium |
@@ -67,14 +68,13 @@ One command runs all of it against a live localnet:
 | frontend | unit tests | SDK 20 + React 15 tests | PASS (CI invocation fixed, F-8) |
 | scans | no committed keys; provenance watermark | the CI secrets scan and watermark scan, identical to CI | PASS |
 | e2e | `contracts/script/e2e-settle.sh` | 15 protocol checks against the live precompile | PASS |
-| e2e | SDK live e2e | sponsored 7702 checkout (3), token launch (1), registry economics (8) — 12 tests | PASS |
+| e2e | SDK live e2e | sponsored 7702 checkout (3), token launch (1), registry economics (9) — 13 tests | PASS |
 | e2e | React live e2e | hooks against the live stack under CORS — 2 tests | PASS |
 | web | bootstrap, `next build`, Playwright | real Chromium vs real chain: CSP/headers, faucet validation, first-visit gasless purchase, gasless token launch, indexed dashboard — 5 tests | PASS |
 
-¹ On the final (v2) run the chain suite ran in full under `-race` (62 s),
-including `TestBaseQuotaOnlyForVerifiedApps`. The live suites add a
-domain-verification step (`setAppDomain` + the localnet attestor) for every app
-whose users should be gasless.
+¹ The chain suite runs in full under `-race`, including `TestBondedBaseQuota`.
+The live suites bond 10,000 test USDC (`Settle.bondApp`) behind every app
+whose users should be gasless — no attestor or special key is involved.
 Two local-environment issues were found and removed along the way — `node` on
 `PATH` resolving to v20 (the runner now refuses to start below Node 22) and a
 corrupt Turbopack cache in `apps/web/.next` — neither is a code defect.
@@ -177,20 +177,20 @@ credits at the protocol price.
 | parameter | v1 | **v2 (current genesis)** | why |
 |---|---|---|---|
 | `credit_price` (acredit per uusdc) | 1e15 — 1 CREDIT = $0.001 | **2e10 — 1 CREDIT = $50** | gas priced as infrastructure cost; a transfer costs L2-like money |
-| base quota | 2M gas/epoch to **every** app | **20M gas/epoch, domain-verified apps only** | closes the fake-app loophole (F-1) |
+| base quota | 2M gas/epoch to **every** app | **v2:** 20M gas/epoch, attestor-verified apps only → **v3:** 2,500 gas/epoch per USDC **bonded**, no gatekeeper | closes the fake-app loophole (F-1) without trusted humans (§5.5) |
 | `quota_weight` | 1000 | **2** | keeps farming unprofitable at the new price |
 | sponsor `maxFeePerGas` cap | 100 gwei | **4 gwei** | bounds what earned quota is worth under congestion |
 | registration fee | 10 CREDIT ($0.01) | **0.2 CREDIT ($10)** | anti-spam only — registering buys no gas |
-| `Settle.setAppDomain` | — | **new** | lets EVM-registered apps request verification |
+| `Settle.bondApp` / `unbondApp` / `appBond` | — | **new (v3)** | EVM-native bonding; unbonding returns capital after 21 days |
 
 ### 5.2 One 10 USDC payment, measured on v2
 
 | path | user needs gas? | user gas cost | protocol fee | payee gets | developer earns | protocol |
 |---|---|--:|--:|--:|--:|---|
-| **Registered + verified app** (sponsored UserOp) | **no** — a zero-balance user works | **$0** | $0.10 | $9.90 | **$0.05** | keeps $0.05; pays $0.027 gas for the first op |
+| **Registered app with quota** (bonded or earned; sponsored UserOp) | **no** — a zero-balance user works | **$0** | $0.10 | $9.90 | **$0.05** | keeps $0.05; pays $0.027 gas for the first op |
 | **Bypass: plain ERC-20 transfer** | yes — and cannot get it alone | **$0.0017** | $0 | $10.00 | $0 | gas burned |
 | **Bypass: Settle rails, no app** | yes | **$0.0059** | $0.10 | $9.90 | **$0** | treasury +$0.07 |
-| **Fake app** (registered, not verified) | yes | same as bypass | — | — | — | **0 sponsored gas**; the sponsor refuses it |
+| **Fake app** (registered, no bond, no fees) | yes | same as bypass | — | — | — | **0 sponsored gas**; the sponsor refuses it |
 
 Per-operation cost at the 1 gwei floor (measured gas; effective price 1.125 gwei):
 
@@ -204,12 +204,12 @@ Per-operation cost at the 1 gwei floor (measured gas; effective price 1.125 gwei
 
 Every transaction that is not sponsored by a registered app now costs about
 **50,000× more than in v1** — real USDC for the compute it uses — while users of
-registered, verified apps still pay nothing.
+registered apps with quota still pay nothing.
 
 What the suite asserts on every run (v2 additions in bold):
 
 1. Registration burns exactly the fee (0.2 CREDIT) on top of gas.
-2. **The app sets its domain (`setAppDomain`) and the attestor verifies it**; a
+2. **The app bonds 10,000 USDC (`bondApp`) — no approval of any kind**; a
    user holding USDC and zero credits then pays 10 USDC in one sponsored
    UserOp. The user's credit balance stays 0, the paymaster's deposit falls by
    exactly the op's `actualGasCost`, and the app's claimable rises by 50% of the fee.
@@ -223,10 +223,15 @@ What the suite asserts on every run (v2 additions in bold):
 6. The sponsor refuses unregistered contracts, plain token transfers and
    `approveApp` for another app.
 7. **Three fresh registrations have 0 quota and a sponsored call from one is
-   refused; the verified app has the full base.**
+   refused; the bonded app's base is exactly bond × rate (25M gas for 10,000 USDC).**
 8. **Farm bound, from the live params:** app share 0.5 + sponsored-gas rebate at
    the sponsor's cap 0.4 = **0.90 < 1**. Every dollar of fees paid to farm
    sponsored gas returns at most 90 cents (10 cents at the fee floor).
+9. **Sybil-proof (v3):** one app bonding 10,000 USDC and two apps bonding 5,000
+   each get the same total quota (25,000,000 = 25,000,000 gas). Unbonding drops
+   quota to 0 at once while the capital stays locked until the release height;
+   on chain, EndBlock at that height returned exactly the 5,000 USDC
+   (`app_unbonded`).
 
 ### 5.3 The limits, stated plainly
 
@@ -260,15 +265,36 @@ Example: $10,000/month (4 validators, RPC, bundler, indexer) and 200 billion gas
 sold per month (~6.5 million ERC-20 transfers, ~2.5 tx/s on average) gives
 **P ≈ $50**, the genesis value. More traffic at the same `P` over-recovers cost
 and governance can lower it; the fee floor still rises with congestion
-(EIP-1559). The verified-app base quota costs the protocol at most
-20M gas × 10⁻⁹ × $50 = **$1 per epoch per verified app** — $1/day on the
-production 86,400-block epoch (the localnet uses 60-block epochs for speed).
+(EIP-1559). Bonded base quota costs the protocol at most
+`gas_per_bonded_unit × 10⁻⁹ × P` per bonded USDC per epoch: 2,500 × 10⁻⁹ × $50 =
+$0.000125, i.e. **~4.6% of the bond per year** in gas on the production
+86,400-block epoch (the localnet uses 60-block epochs for speed). That gas can
+only sponsor the app's own users, so total exposure is bounded by
+`rate × total bonded` and governance can lower the rate at any time.
+
+### 5.5 v3: no gatekeepers — base quota bought with bonded capital
+
+v2 closed the fake-app loophole with human attestors. v3 removes them. The
+research and the rejected alternatives (biometric personhood, passkeys/Face ID,
+document KYC, social-graph and ceremony-based personhood, stamp aggregators,
+DNSSEC proofs, proof of work, token-curated registries) are in
+`docs/security/sybil-resistance.md`. The adopted mechanism is the one ERC-4337
+uses against fake paymasters: **make the attacker lock capital**.
+
+| measured live (`raw/r9-registry-economics.json`, 9/9) | result |
+|---|---|
+| 3 fresh registrations, no bond | **0** gas each; sponsored call refused |
+| 10,000 USDC bonded | **25,000,000** gas/epoch (= bond × 2,500 / USDC) |
+| same 10,000 split over two apps | **25,000,000** gas total — splitting gains nothing |
+| unbond | quota → **0** immediately; capital locked 116 more blocks, then returned by EndBlock (`app_unbonded`, 5,000 USDC) |
+| bond yield, paid only as sponsorship gas | ~**4.6%/yr** at the floor (≤ ~18% at the sponsor cap) |
+| farming via fees | still ≤ **$0.90** back per $1 |
 
 ## 6. Findings
 
 | id | finding | status |
 |---|---|---|
-| F-1 | **Base quota was Sybil-farmable.** `QuotaFor` gave every ACTIVE app `base_gas_per_epoch` unconditionally while registration cost $0.01. On the localnet's 60-block epoch, ~600 registrations ($6) could fill the whole 50% sponsored lane every epoch at the protocol paymaster's expense. On the production 86,400-block epoch the per-app leak is ~1,440× slower, but it is unbounded in time and scales with any repricing of gas. | **fixed (v2)** — base quota only for domain-verified apps (`keeper.BaseQuota`, `TestBaseQuotaOnlyForVerifiedApps`); live: fresh apps get 0 and are refused |
+| F-1 | **Base quota was Sybil-farmable.** `QuotaFor` gave every ACTIVE app `base_gas_per_epoch` unconditionally while registration cost $0.01. On the localnet's 60-block epoch, ~600 registrations ($6) could fill the whole 50% sponsored lane every epoch at the protocol paymaster's expense. On the production 86,400-block epoch the per-app leak is ~1,440× slower, but it is unbounded in time and scales with any repricing of gas. | **fixed** — v2 gated it on human-attested domains; **v3 replaced that with capital-bonded quota** (`keeper.BaseQuota`, `TestBondedBaseQuota`): no gatekeeper, linear in capital, live: fresh apps get 0, a split bond buys exactly what one bond buys |
 | F-2 | **At v1 prices, bypassing the registry was cheap and the gas burn captured ~nothing** ($3.4×10⁻⁸ per transfer). | **fixed (v2)** — gas priced as infrastructure cost: $0.0017 per ERC-20 transfer, measured; coupled params retuned (§5) |
 | F-3 | **Credits move peer-to-peer as EVM value.** Bank sends are disabled, but ERC-4337 needs native value transfers, so holders can trade credits OTC. Supply still only grows via `buyCredits`, and the protocol never redeems. The docs claimed "non-transferable". | **fixed** — ARCHITECTURE, threat model and hardening docs corrected |
 | F-4 | **Accepted ≠ mined under overload.** Past the knee, the EVM pool (geth `legacypool` semantics: `account-slots 16`, `global-slots 5120`, `global-queue 1024` per node) returns success and later truncates; after the 1,000-tps run, 2,470 txs sat queued behind nonce gaps. Not a safety issue, but a wallet sees a hash that never lands. | **open** — ops + client guidance below |
@@ -286,10 +312,10 @@ production 86,400-block epoch (the localnet uses 60-block epochs for speed).
   bundler already does this for UserOps).
 - **F-5:** keep Settle gas estimates tight (the SDK uses `eth_estimateGas`);
   flag integrations that hard-code large gas limits.
-- **Attestation policy:** attestors are now the anti-Sybil gate for protocol
-  gas. At real prices, domain control alone is cheap to fake at scale, so
-  attestors should verify that a real business stands behind each domain
-  before attesting.
+- **Bond rate:** `gas_per_bonded_unit` sets how much sponsorship a bonded USDC
+  buys (≈4.6%/yr of the bond in gas today). Raise it to make onboarding
+  cheaper for apps, lower it to cut protocol exposure; it never affects
+  Sybil resistance, which comes from linearity.
 
 ---
 

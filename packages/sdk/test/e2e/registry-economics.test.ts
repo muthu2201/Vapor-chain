@@ -13,8 +13,10 @@
 //                share is forfeited to the treasury
 //   sponsor      an unregistered / unaccepted contract trying to ride the
 //                protocol sponsor
-//   fake apps    registration alone buys no sponsored gas; only a
-//                domain-verified app gets the protocol base quota
+//   fake apps    registration alone buys no sponsored gas; base quota is
+//                bought with capital bonded behind the app
+//   sybil-proof  the same capital split over fake apps buys exactly the same
+//                total quota; unbonding stops it at once
 //   farm bound   paying fees to farm sponsored gas loses money, from the live
 //                params, even at the sponsor's max fee cap
 //
@@ -43,7 +45,7 @@ import { entryPoint08Abi } from 'viem/account-abstraction'
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createVaporClient, settleCalls, vaporLocalnet } from '../../src/index.js'
-import { verifyApp } from './localnet.js'
+import { bondApp, TEST_BOND } from './localnet.js'
 
 const root = new URL('../../../../', import.meta.url).pathname
 const dep = JSON.parse(readFileSync(`${root}contracts/deployments/779700.json`, 'utf8')) as Record<string, Address>
@@ -114,8 +116,8 @@ describe.skipIf(!ownerKey)('registry economics (live localnet)', () => {
     const hash = await ownerWallet.deployContract({ abi: checkoutArtifact.abi, bytecode: checkoutArtifact.bytecode.object, args: [appId, merchant] })
     checkout = (await pub.waitForTransactionReceipt({ hash, confirmations: 2 })).contractAddress!
     await gasCost((await ownerClient.apps.acceptContract(appId, checkout)).hash as Hash)
-    // protocol-sponsored gas needs a verified domain
-    report.verifiedDomain = await verifyApp(ownerClient, appId)
+    // base sponsorship is bought with bonded capital (no identity checks)
+    report.bondedBaseGas = await bondApp(ownerClient, appId)
   })
 
   it('registered: a zero-gas user pays 10 USDC with one sponsored UserOp; the dev earns 50% of the fee', async () => {
@@ -230,8 +232,8 @@ describe.skipIf(!ownerKey)('registry economics (live localnet)', () => {
     report.sponsorRefusals = refusals
   })
 
-  it('fake apps: registration alone buys no sponsored gas; only a verified app gets the base quota', async () => {
-    const { params } = await getJson<{ params: { registration_fee: { amount: string }; base_gas_per_epoch: string; epoch_length_blocks: string } }>('/vaporchain/apps/v1/params')
+  it('fake apps: registration alone buys no sponsored gas', async () => {
+    const { params } = await getJson<{ params: { registration_fee: { amount: string }; gas_per_bonded_unit: string; unbonding_blocks: string; epoch_length_blocks: string } }>('/vaporchain/apps/v1/params')
     const ids: bigint[] = []
     for (let i = 0; i < 3; i++) ids.push((await ownerClient.apps.register({ recipient: owner.address, metadataUri: `ipfs://fake-${i}`, referrerBps: 0 })).appId)
     await new Promise((r) => setTimeout(r, 3000))
@@ -241,12 +243,40 @@ describe.skipIf(!ownerKey)('registry economics (live localnet)', () => {
     const user = privateKeyToAccount(generatePrivateKey())
     const fakeClient = createVaporClient({ network: vaporLocalnet, account: user, appId: ids[0]!, contracts })
     await expect(fakeClient.pay({ calls: [settleCalls.approveApp(ids[0]!, usdc, 1n)], sponsor: 'app' })).rejects.toThrow(/sponsorship denied|quota/)
-    const verified = await ownerClient.sponsor.quota(appId)
-    expect(verified.gas).toBeGreaterThanOrEqual(BigInt(params.base_gas_per_epoch))
+    // the bonded app's base is exactly bond x rate
+    const rate = BigInt(params.gas_per_bonded_unit)
+    const info = await ownerClient.apps.bondInfo(appId)
+    expect(info.bonded).toBe(TEST_BOND)
+    expect(info.baseGas).toBe((TEST_BOND * rate) / 1_000_000n)
+    // what a bond is worth: gas per USDC per epoch at the floor price, per year on 1-day epochs
+    const usdPerBondedUsdcPerEpoch = toUsd(rate * 1_000_000_000n)
     report.fakeApps = {
       appsRegistered: ids.length, registrationFeeAcredit: BigInt(params.registration_fee.amount), registrationFeeUsd: toUsd(BigInt(params.registration_fee.amount)),
-      quotaPerFakeAppGas: quotas.map((q) => q.gas), verifiedAppBaseGasPerEpoch: BigInt(params.base_gas_per_epoch),
-      verifiedAppBaseUsdPerEpoch: toUsd(BigInt(params.base_gas_per_epoch) * 1_000_000_000n), epochLengthBlocks: Number(params.epoch_length_blocks),
+      quotaPerFakeAppGas: quotas.map((q) => q.gas),
+      gasPerBondedUsdcPerEpoch: rate, unbondingBlocks: Number(params.unbonding_blocks), epochLengthBlocks: Number(params.epoch_length_blocks),
+      bondYieldInGasPerYear1DayEpochs: usdPerBondedUsdcPerEpoch * 365,
+    }
+  })
+
+  it('sybil-proof: the same capital split across fake apps buys exactly the same quota', async () => {
+    const reg = async (tag: string) => (await ownerClient.apps.register({ recipient: owner.address, metadataUri: `ipfs://${tag}`, referrerBps: 0 })).appId
+    const [one, halfA, halfB] = [await reg('one'), await reg('half-a'), await reg('half-b')]
+    await bondApp(ownerClient, one, TEST_BOND)
+    await bondApp(ownerClient, halfA, TEST_BOND / 2n)
+    await bondApp(ownerClient, halfB, TEST_BOND / 2n)
+    const [q1, qa, qb] = await Promise.all([one, halfA, halfB].map((id) => ownerClient.sponsor.quota(id)))
+    expect(qa!.gas + qb!.gas).toBe(q1!.gas) // linear in capital: splitting gains nothing
+    // unbonding stops counting at once; the capital stays locked until release
+    const before = await usdcBal(owner.address)
+    await gasCost((await ownerClient.apps.unbond(halfA, TEST_BOND / 2n)).hash as Hash)
+    expect((await ownerClient.sponsor.quota(halfA)).gas).toBe(0n)
+    const pending = (await ownerClient.apps.bondInfo(halfA)).unbonding
+    expect(pending).toHaveLength(1)
+    expect(await usdcBal(owner.address)).toBe(before) // not returned yet
+    const head = await pub.getBlockNumber()
+    report.sybilProof = {
+      oneAppQuota: q1!.gas, twoFakeAppsQuota: qa!.gas + qb!.gas,
+      unbondedQuota: 0n, releaseHeight: pending[0]!.releaseHeight, lockedForBlocks: pending[0]!.releaseHeight - head,
     }
   })
 

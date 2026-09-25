@@ -5,6 +5,7 @@ import "gogoproto/gogo.proto";
 import "cosmos_proto/cosmos.proto";
 import "cosmos/msg/v1/msg.proto";
 import "amino/amino.proto";
+import "cosmos/base/v1beta1/coin.proto";
 import "vaporchain/apps/v1/apps.proto";
 
 option go_package = "github.com/muthu2201/vapor-chain/chain/x/apps/types";
@@ -20,7 +21,8 @@ service Msg {
   rpc AcceptContractClaim(MsgAcceptContractClaim) returns (MsgAcceptContractClaimResponse);
   rpc RemoveContract(MsgRemoveContract) returns (MsgRemoveContractResponse);
   rpc CancelContractMove(MsgCancelContractMove) returns (MsgCancelContractMoveResponse);
-  rpc AttestDomain(MsgAttestDomain) returns (MsgAttestDomainResponse);
+  rpc BondApp(MsgBondApp) returns (MsgBondAppResponse);
+  rpc UnbondApp(MsgUnbondApp) returns (MsgUnbondAppResponse);
   rpc SetAppStatus(MsgSetAppStatus) returns (MsgSetAppStatusResponse);
   rpc UpdateParams(MsgUpdateParams) returns (MsgUpdateParamsResponse);
 }
@@ -121,14 +123,27 @@ message MsgCancelContractMove {
 }
 message MsgCancelContractMoveResponse {}
 
-message MsgAttestDomain {
-  option (cosmos.msg.v1.signer) = "attestor";
-  option (amino.name) = "vapor/apps/MsgAttestDomain";
-  string attestor = 1 [ (cosmos_proto.scalar) = "cosmos.AddressString" ];
+// MsgBondApp locks the owner's capital (params.bond_denom) behind an app.
+// Base quota = bonded / 1e6 * params.gas_per_bonded_unit gas per epoch.
+message MsgBondApp {
+  option (cosmos.msg.v1.signer) = "owner";
+  option (amino.name) = "vapor/apps/MsgBondApp";
+  string owner = 1 [ (cosmos_proto.scalar) = "cosmos.AddressString" ];
   uint64 app_id = 2;
-  string domain = 3;
+  cosmos.base.v1beta1.Coin amount = 3 [ (gogoproto.nullable) = false ];
 }
-message MsgAttestDomainResponse { bool verified = 1; }
+message MsgBondAppResponse {}
+
+// MsgUnbondApp starts returning bonded capital; it is released to the owner
+// after params.unbonding_blocks and stops counting toward quota immediately.
+message MsgUnbondApp {
+  option (cosmos.msg.v1.signer) = "owner";
+  option (amino.name) = "vapor/apps/MsgUnbondApp";
+  string owner = 1 [ (cosmos_proto.scalar) = "cosmos.AddressString" ];
+  uint64 app_id = 2;
+  cosmos.base.v1beta1.Coin amount = 3 [ (gogoproto.nullable) = false ];
+}
+message MsgUnbondAppResponse { int64 release_height = 1; }
 
 message MsgSetAppStatus {
   option (cosmos.msg.v1.signer) = "authority";

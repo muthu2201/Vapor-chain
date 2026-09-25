@@ -39,7 +39,9 @@ type AppsKeeper interface {
 	ClaimRegistration(ctx sdk.Context, contract common.Address, appID uint64) error
 	AcceptContractClaim(ctx sdk.Context, owner string, appID uint64, contractHex string) (bool, int64, error)
 	RegisterApp(ctx sdk.Context, owner sdk.AccAddress, recipient, metadataURI, domain string, referrerBps uint32) (uint64, error)
-	UpdateApp(ctx sdk.Context, owner string, appID uint64, recipient, metadataURI, domain string, referrerBps uint32) error
+	BondApp(ctx sdk.Context, owner string, appID uint64, amount sdk.Coin) error
+	UnbondApp(ctx sdk.Context, owner string, appID uint64, amount sdk.Coin) (int64, error)
+	BondInfo(ctx sdk.Context, appID uint64) (math.Int, uint64)
 }
 
 // Erc20Keeper resolves ERC-20 addresses to bank denoms.

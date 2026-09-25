@@ -51,21 +51,21 @@ cmd_prepare() {
   #  needs so the file stays forward-compatible with new modules).
   local adm gt; gt="$(cfg '.genesis_time')"; [[ -z "$gt" || "$gt" == "null" ]] && gt="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   adm="$(jq '[.validators[] | {operator, power_granted:(.power + "'"$E18"'"), admitted_height:"0", removed:false, memo:(.memo // "genesis validator")}]' "$CONFIG")"
-  local guardians attestors relayers sponsored faucet
+  local guardians relayers sponsored faucet
   guardians="$(cfg '[.guardians[]]' 2>/dev/null || echo '[]')"; guardians="$(jq -c '[.guardians[]]' "$CONFIG")"
-  attestors="$(jq -c '[.attestors[]]' "$CONFIG")"
   relayers="$(jq -c "[.relayer_recipients[]]" "$CONFIG")"
   sponsored="$(jq -c '[.sponsored_senders_hex[]]' "$CONFIG")"
 
   jqi "$G" \
     --arg gt "$gt" --arg cid "$CID" --argjson adm "$adm" \
-    --arg admin "$(cfg .admin)" --argjson guardians "$guardians" --argjson attestors "$attestors" \
+    --arg admin "$(cfg .admin)" --argjson guardians "$guardians" \
     --argjson relayers "$relayers" --argjson sponsored "$sponsored" \
     --arg tusdc "$(cfg .usdc_erc20)" --arg maxgas "$(cfg .block_max_gas)" --arg burn "$(cfg .gas_burn_bps)" \
     --arg gpmax "$(cfg .guardian_pause_max_blocks)" --arg epoch "$(cfg .epoch_length_blocks)" \
     --arg vote "$(cfg .voting_period)" --arg xvote "$(cfg .expedited_voting_period)" \
     --arg dep "$(cfg .max_deposit_period)" --arg regfee "$(cfg .registration_fee_credit)" \
-    --arg cprice "$(cfg .credit_price)" --arg qweight "$(cfg .quota_weight)" '
+    --arg cprice "$(cfg .credit_price)" --arg qweight "$(cfg .quota_weight)" \
+    --arg bondgas "$(cfg .gas_per_bonded_usdc)" --arg unbond "$(cfg .unbonding_blocks)" '
     .genesis_time = $gt
     | .chain_id = $cid
     | .consensus.params.block.max_gas = $maxgas
@@ -73,7 +73,9 @@ cmd_prepare() {
     | .app_state.council.admissions = $adm
     | .app_state.council.params.guardians = $guardians
     | .app_state.council.params.guardian_pause_max_blocks = $gpmax
-    | .app_state.apps.params.attestors = $attestors
+    | .app_state.apps.params.bond_denom = "'"$USDC"'"
+    | .app_state.apps.params.gas_per_bonded_unit = ($bondgas | tostring)
+    | .app_state.apps.params.unbonding_blocks = $unbond
     | .app_state.apps.params.epoch_length_blocks = $epoch
     | .app_state.apps.params.registration_fee = {denom:"'"$CREDIT"'", amount:$regfee}
     | .app_state.settle.params.treasury_admin = $admin

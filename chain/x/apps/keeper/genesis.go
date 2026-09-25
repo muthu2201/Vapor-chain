@@ -5,6 +5,7 @@ package keeper
 
 import (
 	"cosmossdk.io/collections"
+	"cosmossdk.io/math"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -56,8 +57,18 @@ func (k Keeper) InitGenesis(ctx sdk.Context, gs types.GenesisState) error {
 			return err
 		}
 	}
-	for _, a := range gs.Attestations {
-		if err := k.Attestations.Set(ctx, collections.Join(a.AppId, a.Attestor), a); err != nil {
+	for _, b := range gs.Bonds {
+		if err := k.Bonds.Set(ctx, b.AppId, b.Amount); err != nil {
+			return err
+		}
+	}
+	for _, u := range gs.Unbondings {
+		key := collections.Join3(u.ReleaseHeight, u.AppId, u.Owner)
+		prev, err := k.Unbondings.Get(ctx, key)
+		if err != nil {
+			prev = math.ZeroInt()
+		}
+		if err := k.Unbondings.Set(ctx, key, prev.Add(u.Amount)); err != nil {
 			return err
 		}
 	}
@@ -103,8 +114,14 @@ func (k Keeper) ExportGenesis(ctx sdk.Context) (*types.GenesisState, error) {
 	if err := k.Quotas.Walk(ctx, nil, func(_ uint64, q types.Quota) (bool, error) { gs.Quotas = append(gs.Quotas, q); return false, nil }); err != nil {
 		return nil, err
 	}
-	err = k.Attestations.Walk(ctx, nil, func(_ collections.Pair[uint64, string], a types.DomainAttestation) (bool, error) {
-		gs.Attestations = append(gs.Attestations, a)
+	if err := k.Bonds.Walk(ctx, nil, func(id uint64, v math.Int) (bool, error) {
+		gs.Bonds = append(gs.Bonds, types.AppBond{AppId: id, Amount: v})
+		return false, nil
+	}); err != nil {
+		return nil, err
+	}
+	err = k.Unbondings.Walk(ctx, nil, func(key collections.Triple[int64, uint64, string], v math.Int) (bool, error) {
+		gs.Unbondings = append(gs.Unbondings, types.Unbonding{AppId: key.K2(), Owner: key.K3(), Amount: v, ReleaseHeight: key.K1()})
 		return false, nil
 	})
 	return gs, err

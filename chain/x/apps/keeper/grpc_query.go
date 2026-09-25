@@ -133,3 +133,23 @@ func (q queryServer) CurrentEpoch(goCtx context.Context, _ *types.QueryCurrentEp
 	epoch, start := q.Keeper.CurrentEpoch(ctx)
 	return &types.QueryCurrentEpochResponse{Epoch: epoch, StartedAtHeight: start, EndsAtHeight: start + q.GetParams(ctx).EpochLengthBlocks - 1}, nil
 }
+
+func (q queryServer) Bond(goCtx context.Context, req *types.QueryBondRequest) (*types.QueryBondResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	if _, err := q.GetApp(ctx, req.AppId); err != nil {
+		return nil, queryErr(err)
+	}
+	params := q.GetParams(ctx)
+	bonded := q.BondOf(ctx, req.AppId)
+	resp := &types.QueryBondResponse{Denom: params.BondDenom, Bonded: bonded, BaseGas: BaseQuota(params, bonded)}
+	err := q.Unbondings.Walk(ctx, nil, func(key collections.Triple[int64, uint64, string], v math.Int) (bool, error) {
+		if key.K2() == req.AppId {
+			resp.Unbonding = append(resp.Unbonding, types.Unbonding{AppId: key.K2(), Owner: key.K3(), Amount: v, ReleaseHeight: key.K1()})
+		}
+		return false, nil
+	})
+	if err != nil {
+		return nil, queryErr(err)
+	}
+	return resp, nil
+}

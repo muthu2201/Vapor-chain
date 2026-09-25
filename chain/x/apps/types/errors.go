@@ -17,9 +17,11 @@ var (
 	ErrInvalidParams    = errorsmod.Register(ModuleName, 10, "invalid params")
 	ErrInvalidField     = errorsmod.Register(ModuleName, 11, "invalid field")
 	ErrAppInactive      = errorsmod.Register(ModuleName, 12, "app is not active")
-	ErrNotAttestor      = errorsmod.Register(ModuleName, 13, "signer is not a domain attestor")
-	ErrDomainMismatch   = errorsmod.Register(ModuleName, 14, "attested domain does not match the app's domain")
+	// 13-14 belonged to the removed domain attestors; codes are never reused.
 	ErrMovePending      = errorsmod.Register(ModuleName, 15, "a move for this contract is already pending")
 	ErrNotContract      = errorsmod.Register(ModuleName, 16, "address has no contract code")
 	ErrNoPendingOwner   = errorsmod.Register(ModuleName, 17, "no pending ownership transfer to signer")
+	ErrBondingDisabled  = errorsmod.Register(ModuleName, 18, "bonding is disabled (params.bond_denom is empty)")
+	ErrInvalidBond      = errorsmod.Register(ModuleName, 19, "invalid bond amount or denom")
+	ErrInsufficientBond = errorsmod.Register(ModuleName, 20, "unbond amount exceeds the app's bond")
 )

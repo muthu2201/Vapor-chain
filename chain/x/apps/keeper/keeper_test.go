@@ -153,8 +153,8 @@ func TestQuotaRewardsDiversityNotWashTrading(t *testing.T) {
 	wash := types.EpochStats{AppId: 2, FeeWeight: weight, Payments: 1000, Hll: types.NewHLL()}
 	wash.Hll = types.HLLAdd(wash.Hll, []byte("w1"))
 	wash.Hll = types.HLLAdd(wash.Hll, []byte("w2"))
-	qh := appskeeper.ComputeQuota(params, honest, true)
-	qw := appskeeper.ComputeQuota(params, wash, true)
+	qh := appskeeper.ComputeQuota(params, honest, 0)
+	qw := appskeeper.ComputeQuota(params, wash, 0)
 	require.Equal(t, uint32(10_000), qh.DiversityBps)
 	require.Less(t, qw.DiversityBps, uint32(200))
 	require.Greater(t, qh.Gas, 20*qw.Gas/2, "honest app must earn far more sponsorship than a wash trader")
@@ -181,57 +181,105 @@ func TestEpochRolloverComputesQuota(t *testing.T) {
 	require.Equal(t, uint64(1), after.Epoch)
 }
 
-// TestBaseQuotaOnlyForVerifiedApps closes the fake-app loophole: registering is
-// cheap, so the protocol-sponsored base quota must require attestor-verified
-// domain ownership; changing the domain drops it again, and at rollover an
-// unverified app keeps only what its fees earned.
-func TestBaseQuotaOnlyForVerifiedApps(t *testing.T) {
+// TestBondedBaseQuota: base sponsorship quota is bought with locked capital,
+// never granted per identity, so there is nothing to gain from fake apps and
+// no human gatekeeper is needed.
+func TestBondedBaseQuota(t *testing.T) {
 	e := testutil.Setup(t, 3)
 	k := e.App.AppsKeeper
-	owner, attestor := e.Accounts[0], e.Accounts[1]
+	bank := e.App.BankKeeper
+	owner, stranger := e.Accounts[0], e.Accounts[1]
 	p := k.GetParams(e.Ctx)
-	p.Attestors = []string{attestor.String()}
-	p.AttestationThreshold = 1
 	p.EpochLengthBlocks = 10
+	p.UnbondingBlocks = 20
+	p.MaxGasPerEpoch = 3_000_000 // reachable with a test account's balance
 	require.NoError(t, k.SetParams(e.Ctx, p))
-	require.NotZero(t, p.BaseGasPerEpoch)
+	usdc := func(n int64) sdk.Coin { return sdk.NewCoin(p.BondDenom, math.NewInt(n*appskeeper.BondUnit)) }
+	perUSDC := p.GasPerBondedUnit
 
-	fake, err := k.RegisterApp(e.Ctx, owner, "", "", "fake.example.com", 0)
+	app, err := k.RegisterApp(e.Ctx, owner, "", "", "", 0)
 	require.NoError(t, err)
-	legit, err := k.RegisterApp(e.Ctx, owner, "", "", "shop.example.com", 0)
-	require.NoError(t, err)
-	require.Zero(t, k.QuotaFor(e.Ctx, fake).Gas, "registration alone buys no sponsored gas")
-	require.Zero(t, k.QuotaFor(e.Ctx, legit).Gas)
+	require.Zero(t, k.QuotaFor(e.Ctx, app).Gas, "registration alone buys no sponsored gas")
 
-	// a non-attestor cannot verify, and an attestation must match the app's domain
-	_, err = k.AttestDomain(e.Ctx, owner.String(), legit, "shop.example.com")
-	require.ErrorIs(t, err, types.ErrNotAttestor)
-	_, err = k.AttestDomain(e.Ctx, attestor.String(), legit, "other.example.com")
-	require.ErrorIs(t, err, types.ErrDomainMismatch)
-	verified, err := k.AttestDomain(e.Ctx, attestor.String(), legit, "shop.example.com")
-	require.NoError(t, err)
-	require.True(t, verified)
-	require.Equal(t, p.BaseGasPerEpoch, k.QuotaFor(e.Ctx, legit).Gas)
-	require.Zero(t, k.QuotaFor(e.Ctx, fake).Gas)
+	// only the owner, only the bond denom, only positive amounts
+	require.ErrorIs(t, k.BondApp(e.Ctx, stranger.String(), app, usdc(100)), types.ErrUnauthorized)
+	require.ErrorIs(t, k.BondApp(e.Ctx, owner.String(), app, sdk.NewCoin(constants.CreditDenom, math.NewInt(1))), types.ErrInvalidBond)
+	require.ErrorIs(t, k.BondApp(e.Ctx, owner.String(), app, usdc(0)), types.ErrInvalidBond)
 
-	// rollover: identical fee history, only the verified app gets the base on top
+	before := bank.GetBalance(e.Ctx, owner, p.BondDenom).Amount
+	require.NoError(t, k.BondApp(e.Ctx, owner.String(), app, usdc(1000)))
+	require.Equal(t, 1000*perUSDC, k.QuotaFor(e.Ctx, app).Gas)
+	require.True(t, before.Sub(bank.GetBalance(e.Ctx, owner, p.BondDenom).Amount).Equal(usdc(1000).Amount))
+
+	// Sybil-proof: the same capital split over two apps buys the same total
+	f1, _ := k.RegisterApp(e.Ctx, stranger, "", "", "", 0)
+	f2, _ := k.RegisterApp(e.Ctx, stranger, "", "", "", 0)
+	require.NoError(t, k.BondApp(e.Ctx, stranger.String(), f1, usdc(500)))
+	require.NoError(t, k.BondApp(e.Ctx, stranger.String(), f2, usdc(500)))
+	require.Equal(t, k.QuotaFor(e.Ctx, app).Gas, k.QuotaFor(e.Ctx, f1).Gas+k.QuotaFor(e.Ctx, f2).Gas)
+
+	// unbonding: cannot exceed the bond, stops counting at once, pays out late
+	_, err = k.UnbondApp(e.Ctx, owner.String(), app, usdc(1001))
+	require.ErrorIs(t, err, types.ErrInsufficientBond)
+	_, err = k.UnbondApp(e.Ctx, stranger.String(), app, usdc(1))
+	require.ErrorIs(t, err, types.ErrUnauthorized)
+	release, err := k.UnbondApp(e.Ctx, owner.String(), app, usdc(400))
+	require.NoError(t, err)
+	require.Equal(t, e.Ctx.BlockHeight()+p.UnbondingBlocks, release)
+	require.Equal(t, 600*perUSDC, k.QuotaFor(e.Ctx, app).Gas)
+	mid := bank.GetBalance(e.Ctx, owner, p.BondDenom).Amount
+	for e.Ctx.BlockHeight() < release-1 {
+		e.NextBlock(t)
+	}
+	require.True(t, bank.GetBalance(e.Ctx, owner, p.BondDenom).Amount.Equal(mid), "locked until release height")
+	for i := 0; i < 2; i++ {
+		e.NextBlock(t)
+	}
+	require.True(t, bank.GetBalance(e.Ctx, owner, p.BondDenom).Amount.Sub(mid).Equal(usdc(400).Amount), "released to the owner")
+
+	// earned quota stacks on top of the bond, identically for both apps
 	for i := 0; i < 20; i++ {
-		require.NoError(t, k.RecordSettlement(e.Ctx, legit, []byte{byte(i), 1}, math.NewInt(10_000)))
-		require.NoError(t, k.RecordSettlement(e.Ctx, fake, []byte{byte(i), 2}, math.NewInt(10_000)))
+		require.NoError(t, k.RecordSettlement(e.Ctx, app, []byte{byte(i), 1}, math.NewInt(10_000)))
+		require.NoError(t, k.RecordSettlement(e.Ctx, f1, []byte{byte(i), 2}, math.NewInt(10_000)))
 	}
 	for i := 0; i < 12; i++ {
 		e.NextBlock(t)
 	}
-	qr, qf := k.QuotaFor(e.Ctx, legit), k.QuotaFor(e.Ctx, fake)
-	require.Positive(t, qf.Gas, "fees still earn quota without verification")
-	require.Equal(t, p.BaseGasPerEpoch, qr.Gas-qf.Gas, "the only difference is the verified base")
+	qa, qf := k.QuotaFor(e.Ctx, app), k.QuotaFor(e.Ctx, f1)
+	require.Equal(t, 600*perUSDC-500*perUSDC, qa.Gas-qf.Gas, "the only difference is what each bond buys")
 
-	// moving to an unattested domain resets verification
-	require.NoError(t, k.UpdateApp(e.Ctx, owner.String(), legit, "", "", "new.example.com", 0))
-	app, err := k.GetApp(e.Ctx, legit)
+	// the per-app cap holds however much is bonded
+	big := sdk.NewCoin(p.BondDenom, math.NewIntFromUint64(p.MaxGasPerEpoch/perUSDC+10).MulRaw(appskeeper.BondUnit))
+	require.NoError(t, k.BondApp(e.Ctx, stranger.String(), f2, big))
+	_, base := k.BondInfo(e.Ctx, f2)
+	require.Equal(t, p.MaxGasPerEpoch, base)
+
+	// a revoked app earns nothing, but its owner can always take the capital back
+	require.NoError(t, k.SetAppStatus(e.Ctx, app, types.APP_STATUS_REVOKED))
+	require.Zero(t, k.QuotaFor(e.Ctx, app).Gas)
+	require.ErrorIs(t, k.BondApp(e.Ctx, owner.String(), app, usdc(1)), types.ErrAppInactive)
+	_, err = k.UnbondApp(e.Ctx, owner.String(), app, usdc(600))
 	require.NoError(t, err)
-	require.False(t, app.DomainVerified)
-	require.Zero(t, appskeeper.BaseQuota(p, app.DomainVerified))
+
+	// the module holds exactly bonds + unbondings
+	total, err := k.BondedTotal(e.Ctx)
+	require.NoError(t, err)
+	mod := e.App.AccountKeeper.GetModuleAddress(types.ModuleName)
+	require.True(t, bank.GetBalance(e.Ctx, mod, p.BondDenom).Amount.Equal(total))
+
+	// genesis round trip keeps bonds and unbondings
+	gs, err := k.ExportGenesis(e.Ctx)
+	require.NoError(t, err)
+	require.NoError(t, gs.Validate())
+	require.Len(t, gs.Bonds, 2)
+	require.NotEmpty(t, gs.Unbondings)
+
+	// the bond denom cannot be switched under existing bonds
+	msrv := appskeeper.NewMsgServerImpl(k)
+	np := k.GetParams(e.Ctx)
+	np.BondDenom = "uatom"
+	_, err = msrv.UpdateParams(e.Ctx, &types.MsgUpdateParams{Authority: k.Authority(), Params: np})
+	require.ErrorIs(t, err, types.ErrInvalidParams)
 }
 
 func TestRevokedAppLosesAttribution(t *testing.T) {

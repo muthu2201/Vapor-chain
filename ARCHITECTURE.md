@@ -150,14 +150,17 @@ built on stock `x/staking` with a thin `x/council` that owns the policy:
   **no floats** for the same FMA-reproducibility reason). *Why:* reward apps that
   bring *many distinct* paying users, not one whale looping, without floats in
   consensus.
-- **The `base` part is only for domain-verified apps** (`keeper.BaseQuota`). The
-  owner sets a domain (`Settle.setAppDomain` or `MsgUpdateApp`) and
-  governance-appointed attestors confirm it (`MsgAttestDomain`); changing the
-  domain drops verification. Unverified apps are sponsored only from what their
-  own fees earn. *Why:* registering is permissionless and cheap, so an
-  unconditional base let anyone mint fake apps and have the protocol paymaster
-  pay their gas (measured in `docs/benchmarks/mainnet-sim.md`, F-1). Attestation
-  is the anti-Sybil gate.
+- **The `base` part is bought with bonded capital, not granted per identity**
+  (`keeper.BaseQuota`): `bonded / 1e6 × gas_per_bonded_unit` per epoch. The
+  owner locks USDC behind the app (`MsgBondApp` / `Settle.bondApp`); unbonding
+  stops it counting at once and returns the funds after `unbonding_blocks`.
+  There is no attestor, verifier or allow-list anywhere. *Why:* registering is
+  permissionless and cheap, so a flat per-app grant let anyone farm free gas
+  with fake apps (F-1). Quota linear in capital (and in fees, for earned quota)
+  is Sybil-proof by construction — splitting one bond across many fake apps
+  buys nothing extra — with no human gatekeeper, biometrics or documents. The
+  alternatives considered and why they were rejected:
+  `docs/security/sybil-resistance.md`.
 
 ### 3.5 Sponsored lane (block-space policy) — `chain/lane`
 
@@ -200,8 +203,8 @@ sponsored txs by **recovering the signer from the signature** — unspoofable).
   every transaction consumes validators' compute and storage. Unsponsored
   transactions — including everything that goes around the registry — pay for
   it in USDC (via `buyCredits` or the USDC token paymaster), and the burn turns
-  that into treasury demand. Users of registered, verified apps pay $0 because
-  the app's fees and verified base quota fund their gas. The coupled invariant:
+  that into treasury demand. Users of registered apps pay $0 because the
+  app's fees and bonded base quota fund their gas. The coupled invariant:
   `app_share + quota_weight × sponsor_max_fee ÷ credit_price < 1` (0.5 + 0.4 = 0.9
   at genesis with `quota_weight` 2 and the sponsor's 4 gwei cap), so paying fees
   to farm sponsored gas always loses money. Change these three together.

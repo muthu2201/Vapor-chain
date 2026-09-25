@@ -209,7 +209,8 @@ func num(s string) string {
 // appEventKinds are Cosmos events recorded for dashboards/audit.
 var appEventKinds = map[string]bool{
 	"app_registered": true, "app_updated": true, "app_contract_bound": true, "app_contract_move_scheduled": true,
-	"app_status_changed": true, "app_domain_verified": true, "app_ownership_transferred": true, "apps_epoch_rollover": true,
+	"app_status_changed": true, "app_ownership_transferred": true, "apps_epoch_rollover": true,
+	"app_bonded": true, "app_unbonding": true, "app_unbonded": true,
 	"settle_revenue_claimed": true, "settle_credits_bought": true, "settle_validator_payout": true,
 	"settle_treasury_withdrawn": true, "settle_relayer_disbursed": true, "settle_invariant_broken": true,
 	"settle_tab_closed": true, "council_pause": true, "council_unpause": true, "council_admit_validator": true,

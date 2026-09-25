@@ -29,7 +29,6 @@ type App struct {
 	RevenueRecipient string
 	Status           string
 	Domain           string
-	DomainVerified   bool
 }
 
 type Quota struct {
@@ -109,13 +108,12 @@ func (c *Client) App(ctx context.Context, id uint64) (App, error) {
 			RevenueRecipient string `json:"revenue_recipient"`
 			Status           string `json:"status"`
 			Domain           string `json:"domain"`
-			DomainVerified   bool   `json:"domain_verified"`
 		} `json:"app"`
 	}
 	if err := c.get(ctx, fmt.Sprintf("/vaporchain/apps/v1/apps/%d", id), &r); err != nil {
 		return App{}, err
 	}
-	a := App{AppID: u64(r.App.AppID), Owner: r.App.Owner, RevenueRecipient: r.App.RevenueRecipient, Status: r.App.Status, Domain: r.App.Domain, DomainVerified: r.App.DomainVerified}
+	a := App{AppID: u64(r.App.AppID), Owner: r.App.Owner, RevenueRecipient: r.App.RevenueRecipient, Status: r.App.Status, Domain: r.App.Domain}
 	c.mu.Lock()
 	c.apps[id] = cached[App]{v: a, exp: time.Now().Add(c.cacheTTL)}
 	c.mu.Unlock()

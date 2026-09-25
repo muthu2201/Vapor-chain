@@ -2,30 +2,20 @@
 // Provenance: VAPOR-6eabb1be532bdef4
 //
 // Localnet-only helper for the live e2e suites. Protocol-sponsored base gas
-// is granted only to domain-verified apps, so a test app that should have
-// gasless users gets its domain set by the owner (Settle.setAppDomain) and
-// confirmed by the localnet's attestor key (x/apps MsgAttestDomain).
-import { execFileSync } from 'node:child_process'
+// is bought with capital bonded behind the app (x/apps; linear in the bond,
+// no identity checks, no gatekeeper), so a test app whose users should be
+// gasless bonds some test USDC first.
 import { appsRest, type VaporClient, vaporLocalnet } from '../../src/index.js'
 
-const root = new URL('../../../../', import.meta.url).pathname
-const bin = `${root}chain/build/vaporchaind`
-const home = `${root}.localnet/node0`
+export const TEST_BOND = 10_000_000_000n // 10,000 USDC
 
-export async function verifyApp(owner: VaporClient, appId: bigint, domain = `app${appId}.e2e.vapor.test`): Promise<string> {
-  await owner.apps.setDomain(appId, domain)
-  const out = execFileSync(
-    bin,
-    ['tx', 'apps', 'attest-domain', appId.toString(), domain, '--from', 'attestor', '--keyring-backend', 'test', '--home', home,
-      '--chain-id', vaporLocalnet.cosmosChainId, '--gas', 'auto', '--gas-adjustment', '1.5', '--gas-prices', '2000000000acredit', '-y', '-o', 'json'],
-    { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
-  )
-  const res = JSON.parse(out.slice(out.indexOf('{'))) as { code: number; raw_log: string }
-  if (res.code !== 0) throw new Error(`attest-domain rejected: ${res.raw_log}`)
+export async function bondApp(owner: VaporClient, appId: bigint, amount = TEST_BOND): Promise<bigint> {
+  await owner.apps.bond(appId, amount)
   const rest = appsRest(vaporLocalnet.restUrl)
   for (let i = 0; i < 40; i++) {
-    if ((await rest.get(appId)).domainVerified) return domain
+    const q = await rest.quota(appId)
+    if (q.gas > 0n) return q.gas
     await new Promise((r) => setTimeout(r, 500))
   }
-  throw new Error(`app ${appId} not verified after attestation`)
+  throw new Error(`app ${appId} has no quota after bonding`)
 }

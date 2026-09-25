@@ -25,7 +25,9 @@ var (
 	PendingClaimsKey = collections.NewPrefix(7)
 	EpochStatsKey    = collections.NewPrefix(8)
 	QuotasKey        = collections.NewPrefix(9)
-	AttestationsKey  = collections.NewPrefix(10)
-	EpochNumberKey   = collections.NewPrefix(11)
-	EpochStartKey    = collections.NewPrefix(12)
+	// 10 held domain attestations (human attestors, removed); never reuse it.
+	EpochNumberKey = collections.NewPrefix(11)
+	EpochStartKey  = collections.NewPrefix(12)
+	BondsKey       = collections.NewPrefix(13)
+	UnbondingsKey  = collections.NewPrefix(14)
 )

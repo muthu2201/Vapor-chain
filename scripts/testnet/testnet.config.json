@@ -15,9 +15,6 @@
   "guardians": [
     "vapor1..."
   ],
-  "attestors": [
-    "vapor1..."
-  ],
   "relayer_recipients": [
     "vapor1..."
   ],
@@ -36,5 +33,8 @@
   "registration_fee_credit": "200000000000000000",
   "_economics": "Gas is priced as infrastructure cost: credit_price = acredit minted per uusdc (1e12 / USD-per-CREDIT; 2e10 => 1 CREDIT = 50 USDC, an ERC-20 transfer ~0.0017 USDC at the 1 gwei floor). quota_weight is the gas of sponsorship earned per uusdc of fee; keep quota_weight * sponsor_max_fee_per_gas / credit_price < 0.5 so paying fees to farm sponsored gas always loses money (see docs/benchmarks/mainnet-sim.md).",
   "credit_price": "20000000000",
-  "quota_weight": "2"
+  "quota_weight": "2",
+  "_bonding": "Base sponsorship quota is bought with USDC bonded behind an app (no attestors, no identity checks): gas_per_bonded_usdc gas per epoch per bonded USDC, linear so splitting a bond across fake apps gains nothing; unbonding_blocks keeps withdrawn capital locked (must be >= epoch_length_blocks).",
+  "gas_per_bonded_usdc": "2500",
+  "unbonding_blocks": "1814400"
 }

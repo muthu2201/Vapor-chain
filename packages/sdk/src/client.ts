@@ -15,7 +15,7 @@ import {
 } from 'viem'
 import { vaporCheckoutAbi } from './abi/index.js'
 import { sponsoredSender, toVaporAccount, type Call } from './aa.js'
-import { appsRest, registerApp, type AppRecord, type Quota } from './apps.js'
+import { appsRest, registerApp, type AppBond, type AppRecord, type Quota } from './apps.js'
 import { skipClient, type BridgeStage, type RouteRequest } from './bridge.js'
 import type { VaporNetwork } from './chains.js'
 import { VaporError } from './errors.js'
@@ -61,10 +61,14 @@ export interface VaporClient {
     register(m: { recipient: Address; metadataUri: string; referrerBps?: number }): Promise<{ appId: bigint; hash: Hash }>
     acceptContract(appId: bigint, contract: Address): Promise<TxHandle>
     /**
-     * Set the domain the protocol attestors verify (owner only). Protocol-sponsored
-     * base gas is granted only to domain-verified apps; changing the domain resets it.
+     * Lock `amount` of USDC (base units) behind your app (owner only). Base
+     * sponsorship quota is linear in bonded capital: no identity or approval needed.
      */
-    setDomain(appId: bigint, domain: string): Promise<TxHandle>
+    bond(appId: bigint, amount: bigint): Promise<TxHandle>
+    /** Start returning bonded USDC; it stops counting now and is released after the unbonding period. */
+    unbond(appId: bigint, amount: bigint): Promise<TxHandle>
+    /** Bonded capital, the base quota it buys and pending unbondings. */
+    bondInfo(appId: bigint): Promise<AppBond>
     claimable(appId: bigint, token: Address): Promise<bigint>
     claimRevenue(appId: bigint, token: Address): Promise<TxHandle>
   }
@@ -103,6 +107,15 @@ export function createVaporClient(cfg: VaporClientConfig): VaporClient {
     })
   }
   const sender = () => (senderPromise ??= makeSender())
+
+  // owner-only Settle writes that must land: send, wait, surface a revert
+  async function sendBondCall(c: { to: Address; data: Hex }, what: string): Promise<TxHandle> {
+    const { account, wallet: w } = needAccount()
+    const hash = await w.sendTransaction({ account, chain: network.chain, to: c.to, data: c.data })
+    const r = await publicClient.waitForTransactionReceipt({ hash, confirmations: 2 })
+    if (r.status !== 'success') throw new VaporError(`${what} reverted (are you the owner, and do you hold the USDC?)`, 'NOT_REGISTERED')
+    return { kind: 'tx', hash }
+  }
 
   return {
     publicClient,
@@ -193,14 +206,13 @@ export function createVaporClient(cfg: VaporClientConfig): VaporClient {
         if (r.status !== 'success') throw new VaporError('acceptContractClaim reverted (is the claim pending and are you the owner?)', 'NOT_REGISTERED')
         return { kind: 'tx', hash }
       },
-      async setDomain(appId: bigint, domain: string): Promise<TxHandle> {
-        const { account, wallet: w } = needAccount()
-        const c = settleCalls.setAppDomain(appId, domain)
-        const hash = await w.sendTransaction({ account, chain: network.chain, to: c.to, data: c.data })
-        const r = await publicClient.waitForTransactionReceipt({ hash, confirmations: 2 })
-        if (r.status !== 'success') throw new VaporError('setAppDomain reverted (are you the owner, and is the domain a lowercase hostname?)', 'NOT_REGISTERED')
-        return { kind: 'tx', hash }
+      async bond(appId: bigint, amount: bigint): Promise<TxHandle> {
+        return sendBondCall(settleCalls.bondApp(appId, cfg.contracts.usdc, amount), 'bondApp')
       },
+      async unbond(appId: bigint, amount: bigint): Promise<TxHandle> {
+        return sendBondCall(settleCalls.unbondApp(appId, cfg.contracts.usdc, amount), 'unbondApp')
+      },
+      bondInfo: (appId: bigint) => rest.bond(appId),
       claimable: (appId: bigint, token: Address) => claimable(publicClient, appId, token),
       async claimRevenue(appId: bigint, token: Address): Promise<TxHandle> {
         const { account, wallet: w } = needAccount()

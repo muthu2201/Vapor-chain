@@ -62,10 +62,15 @@ interface ISettle {
     function claimRegistration(uint64 appId) external returns (bool);
     /// @notice App owner (msg.sender) accepts a contract's pending claim.
     function acceptContractClaim(uint64 appId, address contractAddr) external returns (bool pending);
-    /// @notice App owner (msg.sender) sets the domain protocol attestors verify. Protocol-sponsored
-    ///         base gas is only granted to domain-verified apps; changing the domain resets
-    ///         verification. Returns whether the app is currently verified (always false after a change).
-    function setAppDomain(uint64 appId, string calldata domain) external returns (bool verified);
+    /// @notice App owner (msg.sender) locks `amount` of `token` (the chain's bond asset, e.g. USDC)
+    ///         behind the app. Base sponsorship quota is linear in bonded capital, so it needs no
+    ///         identity checks: splitting one bond across many apps never yields more quota.
+    function bondApp(uint64 appId, address token, uint256 amount) external returns (uint256 bonded);
+    /// @notice App owner starts returning bonded capital: it stops counting toward quota now and is
+    ///         released to the owner once the chain's unbonding period has passed.
+    function unbondApp(uint64 appId, address token, uint256 amount) external returns (uint64 releaseHeight);
+    /// @notice Capital bonded behind `appId` and the base quota (gas per epoch) it buys.
+    function appBond(uint64 appId) external view returns (uint256 bonded, uint64 baseGasPerEpoch);
     function appOf(address contractAddr) external view returns (uint64 appId, bool active);
 
     // ------------------------------------------------------------------- revenue

@@ -60,9 +60,11 @@ enforced and tested. It is written so an auditor can map every claim to code.
 - Gas is priced as infrastructure cost (`credit_price`, genesis 1 CREDIT = $50):
   every unsponsored transaction pays real USDC for the compute it uses (~$0.0017
   per ERC-20 transfer, measured), and 100% of gas is burned.
-- Protocol-sponsored **base** quota only for domain-verified apps; unverified
-  apps are sponsored only from what their own fees earn
-  (`TestBaseQuotaOnlyForVerifiedApps`, live: fresh apps get 0).
+- Protocol-sponsored **base** quota is bought with capital bonded behind the
+  app and is linear in it, so fake apps gain nothing and no gatekeeper exists
+  (`TestBondedBaseQuota`; live: fresh apps get 0, a bond split over two apps
+  buys exactly what one app gets). Unbonding locks capital for 21 days.
+  Rationale: `docs/security/sybil-resistance.md`.
 - Farming bound: `app_share + quota_weight × sponsor_max_fee ÷ credit_price < 1`
   (0.9 at genesis); the sponsor caps sponsored `maxFeePerGas` at 4 gwei so the
   bound holds under congestion (`registry-economics.test.ts`, farm bound).

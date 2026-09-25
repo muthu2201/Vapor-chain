@@ -61,17 +61,17 @@ cmd_init() {
   done
 
   # operational accounts live in node0's keyring
-  for k in admin guardian faucet bundler relayer attestor dev; do
+  for k in admin guardian faucet bundler relayer dev; do
     "$BIN" keys add "$k" $KR --home "$coord" --output json >"$NET_DIR/$k.key.json" 2>&1
   done
   addr() { "$BIN" keys show "$1" -a $KR --home "${2:-$coord}"; }
   hexof() { "$BIN" debug addr "$1" 2>/dev/null | awk '/^Address hex:/{print $3}'; }
 
-  local ADMIN GUARDIAN FAUCET BUNDLER RELAYER ATTESTOR DEV BUNDLER_HEX
+  local ADMIN GUARDIAN FAUCET BUNDLER RELAYER DEV BUNDLER_HEX
   ADMIN=$(addr admin); GUARDIAN=$(addr guardian); FAUCET=$(addr faucet)
-  BUNDLER=$(addr bundler); RELAYER=$(addr relayer); ATTESTOR=$(addr attestor); DEV=$(addr dev)
+  BUNDLER=$(addr bundler); RELAYER=$(addr relayer); DEV=$(addr dev)
   BUNDLER_HEX=$(hexof "$BUNDLER")
-  echo "{\"admin\":\"$ADMIN\",\"guardian\":\"$GUARDIAN\",\"faucet\":\"$FAUCET\",\"bundler\":\"$BUNDLER\",\"bundler_hex\":\"$BUNDLER_HEX\",\"relayer\":\"$RELAYER\",\"attestor\":\"$ATTESTOR\",\"dev\":\"$DEV\",\"tusdc\":\"$TUSDC_ADDR\"}" | jq . >"$NET_DIR/accounts.json"
+  echo "{\"admin\":\"$ADMIN\",\"guardian\":\"$GUARDIAN\",\"faucet\":\"$FAUCET\",\"bundler\":\"$BUNDLER\",\"bundler_hex\":\"$BUNDLER_HEX\",\"relayer\":\"$RELAYER\",\"dev\":\"$DEV\",\"tusdc\":\"$TUSDC_ADDR\"}" | jq . >"$NET_DIR/accounts.json"
 
   local G="$coord/config/genesis.json"
 
@@ -87,7 +87,6 @@ cmd_init() {
     echo "{\"address\":\"$FAUCET\",\"coins\":[{\"denom\":\"$CREDIT\",\"amount\":\"100000000$E18\"},{\"denom\":\"$USDC\",\"amount\":\"100000000000000\"}]},"
     echo "{\"address\":\"$BUNDLER\",\"coins\":[{\"denom\":\"$CREDIT\",\"amount\":\"1000000$E18\"}]},"
     echo "{\"address\":\"$RELAYER\",\"coins\":[{\"denom\":\"$CREDIT\",\"amount\":\"10000$E18\"}]},"
-    echo "{\"address\":\"$ATTESTOR\",\"coins\":[{\"denom\":\"$CREDIT\",\"amount\":\"10000$E18\"}]},"
     if ((N_LOAD > 0)); then
       # load-test accounts derived from a seed by tools/loadgen (hex -> bech32)
       "$ROOT/tools/loadgen/bin/loadgen" accounts --count "$N_LOAD" --seed "${LOAD_SEED:-vapor-load}" --hrp vapor |
@@ -110,7 +109,7 @@ cmd_init() {
   # ---- module params for a fast, fully-featured localnet
   jqi "$G" --arg cid "$CHAIN_ID" --argjson adm "$adm" \
     --arg guardian "$GUARDIAN" --arg admin "$ADMIN" --arg relayer "$RELAYER" \
-    --arg bundler "$BUNDLER" --arg bhex "$BUNDLER_HEX" --arg attestor "$ATTESTOR" \
+    --arg bundler "$BUNDLER" --arg bhex "$BUNDLER_HEX" \
     --arg tusdc "$TUSDC_ADDR" --arg maxgas "${BLOCK_MAX_GAS:-40000000}" '
     .chain_id = $cid
     | .consensus.params.block.max_gas = $maxgas
@@ -118,7 +117,8 @@ cmd_init() {
     | .app_state.council.admissions = $adm
     | .app_state.council.params.guardians = [$guardian]
     | .app_state.council.params.guardian_pause_max_blocks = "300"
-    | .app_state.apps.params.attestors = [$attestor]
+    | .app_state.apps.params.bond_denom = "uusdc"
+    | .app_state.apps.params.unbonding_blocks = "120"
     | .app_state.apps.params.epoch_length_blocks = "60"
     | .app_state.settle.params.treasury_admin = $admin
     | .app_state.settle.params.relayer_admin = $relayer

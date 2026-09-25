@@ -64,7 +64,9 @@ const (
 	MethodRegisterApp         = "registerApp"
 	MethodClaimRegistration   = "claimRegistration"
 	MethodAcceptContractClaim = "acceptContractClaim"
-	MethodSetAppDomain        = "setAppDomain"
+	MethodBondApp             = "bondApp"
+	MethodUnbondApp           = "unbondApp"
+	MethodAppBond             = "appBond"
 	MethodAppOf               = "appOf"
 	MethodClaim               = "claim"
 	MethodClaimable           = "claimable"
@@ -128,7 +130,7 @@ func (p Precompile) Run(evm *vm.EVM, contract *vm.Contract, readonly bool) ([]by
 func (Precompile) IsTransaction(method *abi.Method) bool {
 	switch method.Name {
 	case MethodPay, MethodPayFrom, MethodTabPay, MethodCloseTab, MethodApproveApp,
-		MethodRegisterApp, MethodClaimRegistration, MethodAcceptContractClaim, MethodSetAppDomain,
+		MethodRegisterApp, MethodClaimRegistration, MethodAcceptContractClaim, MethodBondApp, MethodUnbondApp,
 		MethodClaim, MethodBuyCredits:
 		return true
 	default:
@@ -162,8 +164,12 @@ func (p Precompile) Execute(ctx sdk.Context, evm *vm.EVM, contract *vm.Contract,
 		return p.claimRegistration(ctx, stateDB, caller, method, args)
 	case MethodAcceptContractClaim:
 		return p.acceptContractClaim(ctx, caller, method, args)
-	case MethodSetAppDomain:
-		return p.setAppDomain(ctx, caller, method, args)
+	case MethodBondApp:
+		return p.bondApp(ctx, caller, method, args)
+	case MethodUnbondApp:
+		return p.unbondApp(ctx, caller, method, args)
+	case MethodAppBond:
+		return p.appBond(ctx, method, args)
 	case MethodAppOf:
 		return p.appOf(ctx, method, args)
 	case MethodClaim:

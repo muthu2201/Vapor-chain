@@ -109,6 +109,7 @@ func (AppModule) AutoCLIOptions() *autocliv1.ModuleOptions {
 				{RpcMethod: "PendingMoves", Use: "pending-moves", Short: "List timelocked contract moves"},
 				{RpcMethod: "PendingClaims", Use: "pending-claims [app-id]", Short: "List contract self-claims awaiting acceptance", PositionalArgs: []*autocliv1.PositionalArgDescriptor{{ProtoField: "app_id"}}},
 				{RpcMethod: "CurrentEpoch", Use: "epoch", Short: "Show the current quota epoch"},
+				{RpcMethod: "Bond", Use: "bond [app-id]", Short: "Show capital bonded behind an app, its base quota and pending unbondings", PositionalArgs: []*autocliv1.PositionalArgDescriptor{{ProtoField: "app_id"}}},
 			},
 		},
 		Tx: &autocliv1.ServiceCommandDescriptor{
@@ -152,8 +153,12 @@ func (AppModule) AutoCLIOptions() *autocliv1.ModuleOptions {
 					PositionalArgs: []*autocliv1.PositionalArgDescriptor{{ProtoField: "app_id"}},
 				},
 				{
-					RpcMethod: "AttestDomain", Use: "attest-domain [app-id] [domain]", Short: "Attestor: confirm DNS TXT ownership",
-					PositionalArgs: []*autocliv1.PositionalArgDescriptor{{ProtoField: "app_id"}, {ProtoField: "domain"}},
+					RpcMethod: "BondApp", Use: "bond [app-id] [amount]", Short: "Lock capital behind your app for base sponsorship quota (e.g. 1000000000uusdc)",
+					PositionalArgs: []*autocliv1.PositionalArgDescriptor{{ProtoField: "app_id"}, {ProtoField: "amount"}},
+				},
+				{
+					RpcMethod: "UnbondApp", Use: "unbond [app-id] [amount]", Short: "Start returning bonded capital (released after unbonding_blocks)",
+					PositionalArgs: []*autocliv1.PositionalArgDescriptor{{ProtoField: "app_id"}, {ProtoField: "amount"}},
 				},
 				{RpcMethod: "SetAppStatus", Skip: true},
 				{RpcMethod: "UpdateParams", Skip: true},
