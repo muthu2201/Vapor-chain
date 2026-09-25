@@ -1,0 +1,78 @@
+{
+  "creditPriceAcreditPerUusdc": "20000000000",
+  "usdPerCredit": 50,
+  "registration": {
+    "feeAcredit": "200000000000000000",
+    "feeUsd": 10,
+    "gasUsed": "79270",
+    "gasAcredit": "89178750000000",
+    "gasUsd": 0.0044589375
+  },
+  "verifiedDomain": "app1.e2e.vapor.test",
+  "registered": {
+    "paymentUusdc": "10000000",
+    "feeUusdc": "100000",
+    "merchantNetUusdc": "9900000",
+    "devShareUusdc": "50000",
+    "treasuryShareUusdc": "20000",
+    "userGasPaidAcredit": "0",
+    "sponsoredOpGasUsed": "430198",
+    "sponsoredOpCostAcredit": "537747500000000",
+    "sponsoredOpCostUsd": 0.026887375,
+    "note": "first op also carries the EIP-7702 authorization for the new account"
+  },
+  "bypassOnboardingWall": {
+    "usdcHeldUusdc": "50000000",
+    "creditsHeld": "0",
+    "plainTransfer": "rejected: insufficient funds for gas",
+    "buyCredits": "rejected: insufficient funds for gas",
+    "consequence": "off-registry a new user needs a third party to hand them gas credits before their first transaction"
+  },
+  "bypassPlain": {
+    "thirdPartyFundingGasAcredit": "23625000000000",
+    "creditsGrantedAcredit": "10000000000000000",
+    "transferGasUsed": "30596",
+    "effectiveGasPriceWei": "1125000000",
+    "transferCostAcredit": "34420500000000",
+    "transferCostUsd": 0.0017210250000000002,
+    "protocolFeeUusdc": "0",
+    "payeeReceivedUusdc": "10000000",
+    "devRevenueUusdc": "0",
+    "transfersPerGrant": 290
+  },
+  "bypassRails": {
+    "feeUusdc": "100000",
+    "payeeNetUusdc": "9900000",
+    "treasuryShareUusdc": "70000",
+    "appShareForfeitedUusdc": "50000",
+    "devRevenueUusdc": "0",
+    "userGasUsed": "105576",
+    "userGasAcredit": "118773000000000",
+    "userGasUsd": 0.005938649999999999
+  },
+  "sponsorRefusals": [
+    "sponsorship denied: call target 0x784849Ec9da99637f03EACd62C9c5F826ba90B7B is not a contract of app 1",
+    "sponsorship denied: call target 0xb235A1c5b84eaEe836DC48DFD50325190371303F is not a contract of app 1",
+    "sponsorship denied: SETTLE.approveApp must target the sponsoring app"
+  ],
+  "fakeApps": {
+    "appsRegistered": 3,
+    "registrationFeeAcredit": "200000000000000000",
+    "registrationFeeUsd": 10,
+    "quotaPerFakeAppGas": [
+      "0",
+      "0",
+      "0"
+    ],
+    "verifiedAppBaseGasPerEpoch": "20000000",
+    "verifiedAppBaseUsdPerEpoch": 1,
+    "epochLengthBlocks": 60
+  },
+  "farmBound": {
+    "quotaWeight": "2",
+    "appShare": 0.5,
+    "rebateAtFloor": 0.1,
+    "rebateAtSponsorCap": 0.4,
+    "worstCaseReturnPerFeeDollar": 0.9
+  }
+}

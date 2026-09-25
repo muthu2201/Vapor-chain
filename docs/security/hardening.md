@@ -74,11 +74,18 @@ The core money paths were found **sound**; they are documented here so the
   prices, but it scales 1:1 with any repricing of gas, and the lane contention
   is a real DoS on legitimate apps' gasless UX. An earlier version of this
   section said no subsidy loophole existed; that was wrong for base quota.
+  (Those figures used the localnet's 60-block epoch; production epochs are
+  86,400 blocks, so the per-app leak is ~1,440× slower — but still unbounded,
+  and it grows with any repricing of gas.)
+  **FIXED (economics v2):** base quota is now granted only to domain-verified
+  apps (`keeper.BaseQuota`; `TestBaseQuotaOnlyForVerifiedApps`). Measured live:
+  three fresh registrations get **0** sponsored gas and the sponsor refuses them.
 
 **Conclusion of the drain audit:** value into `x/settle` is conserved on every
-path, and no attribution loophole lets one party drain another's balance. One
-subsidy gap exists — the unconditional base quota above — and is open pending
-an economics decision (fix options in the benchmark doc).
+path, and no attribution loophole lets one party drain another's balance. The
+one subsidy gap found — the unconditional base quota — is closed, and the
+repriced parameters keep farming unprofitable (worst case 0.90 returned per
+dollar of fees, from live params; `registry-economics.test.ts`).
 
 ---
 
@@ -110,13 +117,13 @@ over time, into protocol revenue. This is the honest, EVM-compatible version of
 "you cannot use the chain without paying us": not a block on deployment, but an
 unavoidable economic funnel through a bought-and-burned compute voucher.
 
-**Magnitude — measured, and small at genesis prices.** The funnel is real
-(burn == fees, exact to the wei, across a whole load campaign) but its size is
-`gas × gas_price ÷ credit_price`. At the genesis values (1 gwei floor, 1 CREDIT
-= $0.001) an ERC-20 transfer burns about **$3.4×10⁻⁸** of credits. So today the
-burn is a correct mechanism with negligible revenue; it only becomes a
-meaningful capture (and a meaningful cost of bypassing the registry) once gas is
-repriced. See `docs/benchmarks/mainnet-sim.md` §Registry economics.
+**Magnitude — measured.** The funnel is exact (burn == fees, to the wei, across
+a whole load campaign) and its size is `gas × gas_price ÷ credit_price`. With the
+original price (1 CREDIT = $0.001) an ERC-20 transfer burned only ~$3.4×10⁻⁸, so
+the capture was negligible. Economics v2 prices gas as infrastructure cost
+(1 CREDIT = $50): the same transfer now costs and burns **~$0.0017**, and every
+unsponsored transaction pays real USDC for the compute it uses. See
+`docs/benchmarks/mainnet-sim.md` §5.
 
 **Why it is safe.**
 - Validators are **not** paid from gas; they are paid from the USDC validator

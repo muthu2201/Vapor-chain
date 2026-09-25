@@ -153,8 +153,8 @@ func TestQuotaRewardsDiversityNotWashTrading(t *testing.T) {
 	wash := types.EpochStats{AppId: 2, FeeWeight: weight, Payments: 1000, Hll: types.NewHLL()}
 	wash.Hll = types.HLLAdd(wash.Hll, []byte("w1"))
 	wash.Hll = types.HLLAdd(wash.Hll, []byte("w2"))
-	qh := appskeeper.ComputeQuota(params, honest)
-	qw := appskeeper.ComputeQuota(params, wash)
+	qh := appskeeper.ComputeQuota(params, honest, true)
+	qw := appskeeper.ComputeQuota(params, wash, true)
 	require.Equal(t, uint32(10_000), qh.DiversityBps)
 	require.Less(t, qw.DiversityBps, uint32(200))
 	require.Greater(t, qh.Gas, 20*qw.Gas/2, "honest app must earn far more sponsorship than a wash trader")
@@ -172,13 +172,66 @@ func TestEpochRolloverComputesQuota(t *testing.T) {
 		require.NoError(t, k.RecordSettlement(e.Ctx, id, []byte{byte(i)}, math.NewInt(100_000)))
 	}
 	before := k.QuotaFor(e.Ctx, id)
-	require.Equal(t, p.BaseGasPerEpoch, before.Gas)
+	require.Zero(t, before.Gas, "an unverified app gets no free base quota")
 	for i := 0; i < 12; i++ {
 		e.NextBlock(t)
 	}
 	after := k.QuotaFor(e.Ctx, id)
-	require.Greater(t, after.Gas, before.Gas)
+	require.Greater(t, after.Gas, before.Gas, "fees paid last epoch earn quota")
 	require.Equal(t, uint64(1), after.Epoch)
+}
+
+// TestBaseQuotaOnlyForVerifiedApps closes the fake-app loophole: registering is
+// cheap, so the protocol-sponsored base quota must require attestor-verified
+// domain ownership; changing the domain drops it again, and at rollover an
+// unverified app keeps only what its fees earned.
+func TestBaseQuotaOnlyForVerifiedApps(t *testing.T) {
+	e := testutil.Setup(t, 3)
+	k := e.App.AppsKeeper
+	owner, attestor := e.Accounts[0], e.Accounts[1]
+	p := k.GetParams(e.Ctx)
+	p.Attestors = []string{attestor.String()}
+	p.AttestationThreshold = 1
+	p.EpochLengthBlocks = 10
+	require.NoError(t, k.SetParams(e.Ctx, p))
+	require.NotZero(t, p.BaseGasPerEpoch)
+
+	fake, err := k.RegisterApp(e.Ctx, owner, "", "", "fake.example.com", 0)
+	require.NoError(t, err)
+	legit, err := k.RegisterApp(e.Ctx, owner, "", "", "shop.example.com", 0)
+	require.NoError(t, err)
+	require.Zero(t, k.QuotaFor(e.Ctx, fake).Gas, "registration alone buys no sponsored gas")
+	require.Zero(t, k.QuotaFor(e.Ctx, legit).Gas)
+
+	// a non-attestor cannot verify, and an attestation must match the app's domain
+	_, err = k.AttestDomain(e.Ctx, owner.String(), legit, "shop.example.com")
+	require.ErrorIs(t, err, types.ErrNotAttestor)
+	_, err = k.AttestDomain(e.Ctx, attestor.String(), legit, "other.example.com")
+	require.ErrorIs(t, err, types.ErrDomainMismatch)
+	verified, err := k.AttestDomain(e.Ctx, attestor.String(), legit, "shop.example.com")
+	require.NoError(t, err)
+	require.True(t, verified)
+	require.Equal(t, p.BaseGasPerEpoch, k.QuotaFor(e.Ctx, legit).Gas)
+	require.Zero(t, k.QuotaFor(e.Ctx, fake).Gas)
+
+	// rollover: identical fee history, only the verified app gets the base on top
+	for i := 0; i < 20; i++ {
+		require.NoError(t, k.RecordSettlement(e.Ctx, legit, []byte{byte(i), 1}, math.NewInt(10_000)))
+		require.NoError(t, k.RecordSettlement(e.Ctx, fake, []byte{byte(i), 2}, math.NewInt(10_000)))
+	}
+	for i := 0; i < 12; i++ {
+		e.NextBlock(t)
+	}
+	qr, qf := k.QuotaFor(e.Ctx, legit), k.QuotaFor(e.Ctx, fake)
+	require.Positive(t, qf.Gas, "fees still earn quota without verification")
+	require.Equal(t, p.BaseGasPerEpoch, qr.Gas-qf.Gas, "the only difference is the verified base")
+
+	// moving to an unattested domain resets verification
+	require.NoError(t, k.UpdateApp(e.Ctx, owner.String(), legit, "", "", "new.example.com", 0))
+	app, err := k.GetApp(e.Ctx, legit)
+	require.NoError(t, err)
+	require.False(t, app.DomainVerified)
+	require.Zero(t, appskeeper.BaseQuota(p, app.DomainVerified))
 }
 
 func TestRevokedAppLosesAttribution(t *testing.T) {

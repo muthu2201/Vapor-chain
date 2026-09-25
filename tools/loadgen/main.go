@@ -414,7 +414,18 @@ func cmdRun(args []string) {
 		}
 	}
 	// Finality latency: a tx in block H is final when H is committed, which is
-	// (to within a few ms) the header time of block H+1.
+	// (to within a few ms) the header time of block H+1. When the drain window
+	// ends while txs are still landing, the newest included block has no
+	// successor yet: wait for it rather than measuring against a missing header.
+	var lastIncl uint64
+	for _, in := range incl {
+		lastIncl = max(lastIncl, in.height)
+	}
+	for wait := time.Now().Add(15 * time.Second); lastIncl > 0 && time.Now().Before(wait); time.Sleep(300 * time.Millisecond) {
+		if h, err := clients[0].BlockNumber(ctx); err == nil && h > lastIncl {
+			break
+		}
+	}
 	for _, in := range incl {
 		lat = append(lat, float64(blockTime(*comet, in.height+1, 0).Sub(in.at).Milliseconds()))
 	}
@@ -437,12 +448,8 @@ func cmdRun(args []string) {
 	}
 	// sustained: from the first send to the commit of the last block holding
 	// one of our txs (block H is committed at the header time of H+1)
-	var lastH uint64
-	for _, in := range incl {
-		lastH = max(lastH, in.height)
-	}
-	if lastH > 0 {
-		if span := blockTime(*comet, lastH+1, 0).Sub(deadline.Add(-*dur)).Seconds(); span > 0 {
+	if lastIncl > 0 {
+		if span := blockTime(*comet, lastIncl+1, 0).Sub(deadline.Add(-*dur)).Seconds(); span > 0 {
 			rep.InclusionSpanSec = span
 			rep.TPSSustained = float64(included) / span
 		}
@@ -476,11 +483,13 @@ func blockTime(comet string, height uint64, fallback uint64) time.Time {
 			}
 			if json.NewDecoder(resp.Body).Decode(&out) == nil && !out.Result.Header.Time.IsZero() {
 				t = out.Result.Header.Time
+				// cache real header times only: a height that does not exist yet
+				// must be fetched again rather than pinned to the fallback
+				btCache.Store(height, t)
 			}
 			resp.Body.Close()
 		}
 	}
-	btCache.Store(height, t)
 	return t
 }
 

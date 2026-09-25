@@ -10,6 +10,7 @@ import { createPublicClient, createWalletClient, erc20Abi, http, keccak256, pars
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { createVaporClient, isDelegated, settleCalls, SIMPLE_7702_IMPLEMENTATION, vaporLocalnet, verifyingPaymasterAbi, VaporError } from '../../src/index.js'
+import { verifyApp } from './localnet.js'
 
 const root = new URL('../../../../', import.meta.url).pathname
 const dep = JSON.parse(readFileSync(`${root}contracts/deployments/779700.json`, 'utf8')) as Record<string, Address>
@@ -31,6 +32,7 @@ describe.skipIf(!ownerKey)('sponsored 7702 checkout (live localnet)', () => {
     const hash = await ownerWallet.deployContract({ abi: checkoutArtifact.abi, bytecode: checkoutArtifact.bytecode.object, args: [appId, merchant] })
     checkout = (await pub.waitForTransactionReceipt({ hash, confirmations: 2 })).contractAddress!
     await ownerClient.apps.acceptContract(appId, checkout)
+    await verifyApp(ownerClient, appId) // protocol-sponsored gas needs a verified domain
   })
 
   it('a zero-gas user pays an order with one sponsored 7702 UserOp', async () => {

@@ -102,6 +102,28 @@ async function launchpad(): Promise<bigint> {
   return appId
 }
 
+// Protocol-sponsored gas is granted only to domain-verified apps: the owner
+// sets the domain (Settle.setAppDomain) and the localnet attestor confirms it.
+async function ensureVerified(appId: bigint, domain: string): Promise<void> {
+  if ((await rest.get(appId)).domainVerified) return
+  await client.apps.setDomain(appId, domain)
+  const out = execFileSync(
+    bin,
+    [
+      'tx', 'apps', 'attest-domain', appId.toString(), domain,
+      '--from', 'attestor', '--keyring-backend', 'test', '--home', resolve(net, 'node0'),
+      '--chain-id', 'vapor-local-1', '--node', 'tcp://127.0.0.1:26657',
+      '--gas', 'auto', '--gas-adjustment', '1.5', '--gas-prices', '1000000000acredit', '-y', '-o', 'json',
+    ],
+    { encoding: 'utf8' },
+  )
+  const { code, raw_log } = JSON.parse(out) as { code: number; raw_log: string }
+  if (code !== 0) throw new Error(`attest-domain failed: ${raw_log}`)
+  for (let i = 0; i < 30 && !(await rest.get(appId)).domainVerified; i++) await new Promise((r) => setTimeout(r, 500))
+  if (!(await rest.get(appId)).domainVerified) throw new Error(`app ${appId} was not verified`)
+  console.log(`app ${appId}: domain ${domain} verified`)
+}
+
 function faucetKey(): string {
   const f = resolve(secrets, 'faucet')
   if (!existsSync(f)) {
@@ -115,6 +137,8 @@ function faucetKey(): string {
 
 const s = await shop()
 const lp = await launchpad()
+await ensureVerified(s.appId, 'shop.vapor.test')
+await ensureVerified(lp, 'launchpad.vapor.test')
 const env = {
   NEXT_PUBLIC_VAPOR_NETWORK_NAME: 'VaporChain Localnet',
   NEXT_PUBLIC_VAPOR_EVM_CHAIN_ID: String(chain.id),

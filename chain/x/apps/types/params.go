@@ -21,19 +21,24 @@ const (
 
 func DefaultParams() Params {
 	return Params{
-		// 10 credits (~0.01 USDC at the default credit price) burned per
-		// registration: negligible for a real developer, expensive for a spammer
-		// registering millions of apps.
-		RegistrationFee:         sdk.NewCoin(constants.CreditDenom, math.NewIntWithDecimal(10, 18)),
+		// 0.2 credits (~10 USDC at the genesis price of 1 CREDIT = 50 USDC)
+		// burned per registration: pure anti-spam. Registering buys no
+		// sponsored gas by itself (BaseGasPerEpoch needs a verified domain),
+		// so the fee does not have to out-price a free-gas faucet.
+		RegistrationFee:         sdk.NewCoin(constants.CreditDenom, math.NewIntWithDecimal(2, 17)),
 		MaxContractsPerApp:      100,
 		ContractMoveDelayBlocks: 604_800, // ~7 days at 1s blocks
 		EpochLengthBlocks:       86_400,  // ~1 day
-		BaseGasPerEpoch:         2_000_000,
-		MaxGasPerEpoch:          5_000_000_000,
-		DiversityTarget:         5,
-		Attestors:               []string{},
-		AttestationThreshold:    1,
-		MaxReferrerBps:          1_000, // referrer may take up to 10% of the app's share
+		// Protocol-sponsored onboarding gas per epoch for DOMAIN-VERIFIED apps
+		// only (keeper.BaseQuota): ~25 first-time gasless users a day, worth
+		// ~1.1 USDC/day per vetted app at the genesis price. Unverified apps
+		// get sponsorship only from the fees they generate.
+		BaseGasPerEpoch:      20_000_000,
+		MaxGasPerEpoch:       5_000_000_000,
+		DiversityTarget:      5,
+		Attestors:            []string{},
+		AttestationThreshold: 1,
+		MaxReferrerBps:       1_000, // referrer may take up to 10% of the app's share
 	}
 }
 

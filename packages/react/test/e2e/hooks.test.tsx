@@ -14,6 +14,7 @@ import { createPublicClient, createWalletClient, erc20Abi, http, keccak256, stri
 import { privateKeyToAccount, type PrivateKeyAccount } from 'viem/accounts'
 import { afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { createVaporClient, vaporLocalnet } from '@vaporchain/sdk'
+import { verifyApp } from './localnet.js'
 import {
   indexedDbKeyStore,
   useCheckout,
@@ -47,6 +48,7 @@ describe.skipIf(!ownerKey)('react hooks (live localnet)', () => {
     const hash = await ownerWallet.deployContract({ abi: checkoutArtifact.abi, bytecode: checkoutArtifact.bytecode.object, args: [appId, merchant] })
     checkout = (await pub.waitForTransactionReceipt({ hash, confirmations: 2 })).contractAddress!
     await ownerClient.apps.acceptContract(appId, checkout)
+    await verifyApp(ownerClient, appId) // protocol-sponsored gas needs a verified domain
   })
 
   let qc = new QueryClient()

@@ -106,7 +106,23 @@ const { appId } = await client.apps.register({
 })
 // attribute your checkout/contract so its revenue and sponsorship route to you:
 await client.apps.acceptContract(appId, checkoutAddress)  // after a proof, see the CLI
+// protocol-sponsored onboarding gas needs a verified domain:
+await client.apps.setDomain(appId, 'shop.example.com')    // then prove control to the attestors
 ```
+
+**Who pays gas.** Every transaction pays for the chain's compute at the
+protocol price — about 0.0017 USDC for an ERC-20 transfer at the fee floor —
+unless an app sponsors it. Your users pay **nothing** when your app sponsors
+them, from its quota:
+
+- **earned quota** — what your volume earns: `quota_weight` gas per uusdc of
+  Settle fee your contracts generate, from the next epoch;
+- **base quota** — a per-epoch onboarding allowance, granted only once the
+  protocol attestors verify your domain (`client.apps.setDomain`, then the DNS
+  proof). Registering alone buys no sponsored gas.
+
+Users of unregistered contracts pay their own gas, in credits or in USDC via the
+token paymaster.
 
 Contract attribution needs an ownership proof (CREATE nonce, CREATE2, or
 `Ownable`); the fastest path is `VaporCheckout`, which self-claims in its

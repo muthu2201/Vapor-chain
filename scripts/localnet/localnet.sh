@@ -130,8 +130,8 @@ cmd_init() {
     | .app_state.settle.params.assets = [{
         denom:"uusdc", enabled:true, symbol:"USDC", decimals:6,
         min_fee:"2000", max_fee:"5000000", micro_threshold:"250000",
-        tab_settle_threshold:"1000000", quota_weight:"1000",
-        credit_price:"1000000000000000"}]
+        tab_settle_threshold:"1000000", quota_weight:"2",
+        credit_price:"20000000000"}]
     | .app_state.erc20.token_pairs = [{erc20_address:$tusdc, denom:"uusdc", enabled:true, contract_owner:"OWNER_MODULE"}]
     | .app_state.erc20.dynamic_precompiles = [$tusdc]
     | .app_state.bank.denom_metadata += [{

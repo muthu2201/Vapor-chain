@@ -438,6 +438,30 @@ export const settleAbi = [
   },
   {
     "type": "function",
+    "name": "setAppDomain",
+    "inputs": [
+      {
+        "name": "appId",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "domain",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "verified",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "tabPay",
     "inputs": [
       {

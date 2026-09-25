@@ -428,6 +428,32 @@ func (p Precompile) acceptContractClaim(ctx sdk.Context, caller common.Address, 
 	return method.Outputs.Pack(pending)
 }
 
+// setAppDomain(appId, domain): owner-only. Keeps every other app field and
+// resets verification when the domain changes (x/apps UpdateApp), so an app
+// cannot carry a verified status over to a domain nobody attested.
+func (p Precompile) setAppDomain(ctx sdk.Context, caller common.Address, method *abi.Method, args []interface{}) ([]byte, error) {
+	appID, err := argUint64(args, 0)
+	if err != nil {
+		return nil, err
+	}
+	domain, ok := args[1].(string)
+	if !ok {
+		return nil, fmt.Errorf("settle: invalid domain argument")
+	}
+	app, err := p.apps.GetApp(ctx, appID)
+	if err != nil {
+		return nil, err
+	}
+	if err := p.apps.UpdateApp(ctx, acc(caller).String(), appID, "", app.MetadataUri, domain, app.ReferrerBps); err != nil {
+		return nil, err
+	}
+	updated, err := p.apps.GetApp(ctx, appID)
+	if err != nil {
+		return nil, err
+	}
+	return method.Outputs.Pack(updated.DomainVerified)
+}
+
 func (p Precompile) appOf(ctx sdk.Context, method *abi.Method, args []interface{}) ([]byte, error) {
 	c, err := argAddress(args, 0)
 	if err != nil {

@@ -74,6 +74,7 @@ send "$USDC" 'transfer(address,uint256)' "$TPM" 3000000 --private-key "$USER_KEY
 DEP0=$(num "$(cast call "$TPM" 'getDeposit()(uint256)' --rpc-url "$RPC_URL")")
 send "$TPM" 'refill(uint256)' 3000000 --private-key "$USER_KEY" --gas-limit 500000 >/dev/null
 DEP1=$(num "$(cast call "$TPM" 'getDeposit()(uint256)' --rpc-url "$RPC_URL")")
-eq "$(python3 -c "print(($DEP1 - $DEP0) // 10**18)")" 3000 "3 USDC bought 3000 CREDIT and deposited"
+Q=$(num "$(cast call $S 'quoteCredits(address,uint256)(uint256)' "$USDC" 3000000 --rpc-url "$RPC_URL")")
+eq "$(python3 -c "print($DEP1 - $DEP0)")" "$Q" "3 USDC bought exactly quoteCredits(3 USDC) and deposited"
 echo
 echo "E2E: ALL CHECKS PASSED"

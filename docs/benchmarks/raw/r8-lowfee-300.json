@@ -1,0 +1,42 @@
+{
+  "scenario": "lowfee",
+  "duration_sec": 30.002080197,
+  "target_rate_tps": 300,
+  "sent": 8966,
+  "accepted_by_mempool": 0,
+  "rejected_by_mempool": 8966,
+  "reject_reasons": {
+    "inserting tx: max fee per gas (1) is lower than the base fee (1000000000): insuf": 8966
+  },
+  "included_onchain": 0,
+  "reverted_onchain": 0,
+  "inclusion_rate": 0,
+  "onchain_tps": 0,
+  "onchain_tps_sustained": 0,
+  "inclusion_span_sec": 0,
+  "latency_ms": {
+    "max": 0,
+    "p50": 0,
+    "p95": 0,
+    "p99": 0
+  },
+  "blocks_observed": 35,
+  "block_time_ms": {
+    "max": 1059,
+    "p50": 958,
+    "p95": 1049
+  },
+  "max_tx_per_block": 0,
+  "block_gas_utilization": {
+    "max": 0,
+    "p50": 0
+  },
+  "max_sponsored_gas_share": 0,
+  "chain_window": {
+    "from_height": 897,
+    "to_height": 934,
+    "blocks": 38,
+    "nonempty_blocks": 0,
+    "evm_txs": 0
+  }
+}

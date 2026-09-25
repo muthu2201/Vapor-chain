@@ -122,7 +122,13 @@ func main() {
 
 	paymaster := common.HexToAddress(must("VAPOR_PAYMASTER"))
 	entryPoint := common.HexToAddress(env("VAPOR_ENTRYPOINT", "0x4337084D9E255Ff0702461CF8895CE9E3b5Ff108"))
-	maxFee, _ := new(big.Int).SetString(env("VAPOR_MAX_FEE_PER_GAS", "100000000000"), 10)
+	// 4 gwei = 4x the fee floor. This cap bounds what an app's earned quota is
+	// worth: with quota_weight 2 at the genesis credit price, sponsored gas
+	// spent at <= 4 gwei returns at most 0.4 of the fee that earned it, so the
+	// app share (0.5) + that rebate stays < 1 and paying fees to farm free gas
+	// always loses money. During congestion above the cap sponsored ops wait
+	// (they are the lower-priority lane anyway); paying users are unaffected.
+	maxFee, _ := new(big.Int).SetString(env("VAPOR_MAX_FEE_PER_GAS", "4000000000"), 10)
 
 	cc := chain.New(must("VAPOR_REST"), eth, 15*time.Second)
 	pol := policy.New(policy.Config{

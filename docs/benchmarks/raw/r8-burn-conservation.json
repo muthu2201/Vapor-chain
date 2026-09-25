@@ -1,0 +1,10 @@
+{
+  "from_height": 781,
+  "to_height": 938,
+  "evm_txs": 11974,
+  "gas_fees_paid_acredit": "1882404000000000000",
+  "supply_before": "103429996032514169422982200",
+  "supply_after": "103429994150110169422982200",
+  "supply_burned_acredit": "1882404000000000000",
+  "burned_equals_fees": true
+}

@@ -150,6 +150,14 @@ built on stock `x/staking` with a thin `x/council` that owns the policy:
   **no floats** for the same FMA-reproducibility reason). *Why:* reward apps that
   bring *many distinct* paying users, not one whale looping, without floats in
   consensus.
+- **The `base` part is only for domain-verified apps** (`keeper.BaseQuota`). The
+  owner sets a domain (`Settle.setAppDomain` or `MsgUpdateApp`) and
+  governance-appointed attestors confirm it (`MsgAttestDomain`); changing the
+  domain drops verification. Unverified apps are sponsored only from what their
+  own fees earn. *Why:* registering is permissionless and cheap, so an
+  unconditional base let anyone mint fake apps and have the protocol paymaster
+  pay their gas (measured in `docs/benchmarks/mainnet-sim.md`, F-1). Attestation
+  is the anti-Sybil gate.
 
 ### 3.5 Sponsored lane (block-space policy) — `chain/lane`
 
@@ -186,6 +194,17 @@ sponsored txs by **recovering the signer from the signature** — unspoofable).
   costs them nothing, and it can only *lower* supply so the `supply ≤ genesis +
   minted` invariant is preserved. Full rationale and the drain audit behind it:
   `docs/security/hardening.md`.
+- **Gas is priced as infrastructure cost.** `credit_price` (acredit minted per
+  uusdc) sets what compute costs in USDC. Genesis: 2e10, i.e. 1 CREDIT = 50 USDC,
+  so an ERC-20 transfer costs ~0.0017 USDC at the 1 gwei floor (measured). *Why:*
+  every transaction consumes validators' compute and storage. Unsponsored
+  transactions — including everything that goes around the registry — pay for
+  it in USDC (via `buyCredits` or the USDC token paymaster), and the burn turns
+  that into treasury demand. Users of registered, verified apps pay $0 because
+  the app's fees and verified base quota fund their gas. The coupled invariant:
+  `app_share + quota_weight × sponsor_max_fee ÷ credit_price < 1` (0.5 + 0.4 = 0.9
+  at genesis with `quota_weight` 2 and the sponsor's 4 gwei cap), so paying fees
+  to farm sponsored gas always loses money. Change these three together.
 - **Block-STM** (parallel EVM execution) is opt-in via `app.toml [vaporchain]
   block-stm` (default off) — correctness-first default, throughput when you want
   it.

@@ -13,7 +13,14 @@
 //                share is forfeited to the treasury
 //   sponsor      an unregistered / unaccepted contract trying to ride the
 //                protocol sponsor
-//   sybil        what one registration buys (base quota) vs what it costs
+//   fake apps    registration alone buys no sponsored gas; only a
+//                domain-verified app gets the protocol base quota
+//   farm bound   paying fees to farm sponsored gas loses money, from the live
+//                params, even at the sponsor's max fee cap
+//
+// Gas is priced as infrastructure cost (credit_price), so every unsponsored
+// transaction costs real money; registered, verified apps make it $0 for
+// their users.
 //
 // Assertions encode the chain's actual behaviour; the measured numbers are
 // written to $VAPOR_E2E_REPORT (JSON) for docs/benchmarks/mainnet-sim.md.
@@ -36,6 +43,7 @@ import { entryPoint08Abi } from 'viem/account-abstraction'
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createVaporClient, settleCalls, vaporLocalnet } from '../../src/index.js'
+import { verifyApp } from './localnet.js'
 
 const root = new URL('../../../../', import.meta.url).pathname
 const dep = JSON.parse(readFileSync(`${root}contracts/deployments/779700.json`, 'utf8')) as Record<string, Address>
@@ -49,6 +57,10 @@ const usdc = dep.usdc!
 const contracts = { tokenFactory: dep.tokenFactory!, usdc }
 const depositAbi = parseAbi(['function getDeposit() view returns (uint256)'])
 const PAYMENT = 10_000_000n // 10 USDC
+// sponsor default VAPOR_MAX_FEE_PER_GAS (services/sponsor/cmd/sponsor/main.go)
+const SPONSOR_MAX_FEE_PER_GAS = 4_000_000_000n
+// an unsponsored transaction must cost real money, not dust
+const REAL_MONEY_USD = 0.0005
 
 const getJson = async <T>(path: string): Promise<T> => (await fetch(`${rest}${path}`)).json() as Promise<T>
 const pool = async (name: string): Promise<bigint> => {
@@ -102,6 +114,8 @@ describe.skipIf(!ownerKey)('registry economics (live localnet)', () => {
     const hash = await ownerWallet.deployContract({ abi: checkoutArtifact.abi, bytecode: checkoutArtifact.bytecode.object, args: [appId, merchant] })
     checkout = (await pub.waitForTransactionReceipt({ hash, confirmations: 2 })).contractAddress!
     await gasCost((await ownerClient.apps.acceptContract(appId, checkout)).hash as Hash)
+    // protocol-sponsored gas needs a verified domain
+    report.verifiedDomain = await verifyApp(ownerClient, appId)
   })
 
   it('registered: a zero-gas user pays 10 USDC with one sponsored UserOp; the dev earns 50% of the fee', async () => {
@@ -163,6 +177,7 @@ describe.skipIf(!ownerKey)('registry economics (live localnet)', () => {
     const t = await gasCost(await w.writeContract({ address: usdc, abi: erc20Abi, functionName: 'transfer', args: [payee, PAYMENT] }))
     expect(await usdcBal(payee)).toBe(PAYMENT) // 0% protocol fee
     expect(await pub.getBalance({ address: user.address })).toBe(grant - t.cost)
+    expect(toUsd(t.cost)).toBeGreaterThan(REAL_MONEY_USD) // the chain's compute is paid for
     report.bypassPlain = {
       thirdPartyFundingGasAcredit: fund.cost, creditsGrantedAcredit: grant,
       transferGasUsed: t.gasUsed, effectiveGasPriceWei: t.price, transferCostAcredit: t.cost, transferCostUsd: toUsd(t.cost),
@@ -184,6 +199,7 @@ describe.skipIf(!ownerKey)('registry economics (live localnet)', () => {
     const treasuryDelta = (await pool('treasury')) - treasury0
     expect(await usdcBal(payee)).toBe(PAYMENT - fee)
     expect(treasuryDelta).toBe((fee * 70n) / 100n) // 20% treasury + the 50% nobody claimed
+    expect(toUsd(g.cost)).toBeGreaterThan(REAL_MONEY_USD)
     report.bypassRails = {
       feeUusdc: fee, payeeNetUusdc: PAYMENT - fee, treasuryShareUusdc: treasuryDelta, appShareForfeitedUusdc: fee / 2n, devRevenueUusdc: 0n,
       userGasUsed: g.gasUsed, userGasAcredit: g.cost, userGasUsd: toUsd(g.cost),
@@ -214,17 +230,35 @@ describe.skipIf(!ownerKey)('registry economics (live localnet)', () => {
     report.sponsorRefusals = refusals
   })
 
-  it('sybil: what one registration costs vs the base quota it unlocks', async () => {
+  it('fake apps: registration alone buys no sponsored gas; only a verified app gets the base quota', async () => {
     const { params } = await getJson<{ params: { registration_fee: { amount: string }; base_gas_per_epoch: string; epoch_length_blocks: string } }>('/vaporchain/apps/v1/params')
     const ids: bigint[] = []
-    for (let i = 0; i < 3; i++) ids.push((await ownerClient.apps.register({ recipient: owner.address, metadataUri: `ipfs://sybil-${i}`, referrerBps: 0 })).appId)
+    for (let i = 0; i < 3; i++) ids.push((await ownerClient.apps.register({ recipient: owner.address, metadataUri: `ipfs://fake-${i}`, referrerBps: 0 })).appId)
     await new Promise((r) => setTimeout(r, 3000))
     const quotas = await Promise.all(ids.map((id) => ownerClient.sponsor.quota(id)))
-    for (const q of quotas) expect(q.gas).toBe(BigInt(params.base_gas_per_epoch)) // usable immediately, with zero payments
-    report.sybil = {
+    for (const q of quotas) expect(q.gas).toBe(0n) // nothing for the protocol paymaster to pay
+    // a fresh fake app cannot ride the sponsor either: it has no quota to spend
+    const user = privateKeyToAccount(generatePrivateKey())
+    const fakeClient = createVaporClient({ network: vaporLocalnet, account: user, appId: ids[0]!, contracts })
+    await expect(fakeClient.pay({ calls: [settleCalls.approveApp(ids[0]!, usdc, 1n)], sponsor: 'app' })).rejects.toThrow(/sponsorship denied|quota/)
+    const verified = await ownerClient.sponsor.quota(appId)
+    expect(verified.gas).toBeGreaterThanOrEqual(BigInt(params.base_gas_per_epoch))
+    report.fakeApps = {
       appsRegistered: ids.length, registrationFeeAcredit: BigInt(params.registration_fee.amount), registrationFeeUsd: toUsd(BigInt(params.registration_fee.amount)),
-      baseGasPerEpoch: BigInt(params.base_gas_per_epoch), epochLengthBlocks: Number(params.epoch_length_blocks),
-      quotaPerAppGas: quotas.map((q) => q.gas),
+      quotaPerFakeAppGas: quotas.map((q) => q.gas), verifiedAppBaseGasPerEpoch: BigInt(params.base_gas_per_epoch),
+      verifiedAppBaseUsdPerEpoch: toUsd(BigInt(params.base_gas_per_epoch) * 1_000_000_000n), epochLengthBlocks: Number(params.epoch_length_blocks),
     }
+  })
+
+  it('farm bound: paying fees to farm sponsored gas always loses money', async () => {
+    const { params } = await getJson<{ params: { split: { app_bps: number }; assets: { denom: string; quota_weight: string }[] } }>('/vaporchain/settle/v1/params')
+    const qw = BigInt(params.assets.find((a) => a.denom === 'uusdc')!.quota_weight)
+    const appShare = Number(params.split.app_bps) / 10_000
+    // quota earned per uusdc of fee is `quota_weight` gas; spent at <= the sponsor's max fee
+    const rebateAtCap = Number(qw * SPONSOR_MAX_FEE_PER_GAS) / Number(creditPrice)
+    const rebateAtFloor = Number(qw * 1_000_000_000n) / Number(creditPrice)
+    // a self-dealing app gets its own app share back plus the sponsored gas it earned
+    expect(appShare + rebateAtCap).toBeLessThan(1)
+    report.farmBound = { quotaWeight: qw, appShare, rebateAtFloor, rebateAtSponsorCap: rebateAtCap, worstCaseReturnPerFeeDollar: appShare + rebateAtCap }
   })
 })

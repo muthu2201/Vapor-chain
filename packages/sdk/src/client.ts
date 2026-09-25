@@ -60,6 +60,11 @@ export interface VaporClient {
     get(appId: bigint): Promise<AppRecord>
     register(m: { recipient: Address; metadataUri: string; referrerBps?: number }): Promise<{ appId: bigint; hash: Hash }>
     acceptContract(appId: bigint, contract: Address): Promise<TxHandle>
+    /**
+     * Set the domain the protocol attestors verify (owner only). Protocol-sponsored
+     * base gas is granted only to domain-verified apps; changing the domain resets it.
+     */
+    setDomain(appId: bigint, domain: string): Promise<TxHandle>
     claimable(appId: bigint, token: Address): Promise<bigint>
     claimRevenue(appId: bigint, token: Address): Promise<TxHandle>
   }
@@ -186,6 +191,14 @@ export function createVaporClient(cfg: VaporClientConfig): VaporClient {
         const hash = await w.sendTransaction({ account, chain: network.chain, to: c.to, data: c.data })
         const r = await publicClient.waitForTransactionReceipt({ hash, confirmations: 2 })
         if (r.status !== 'success') throw new VaporError('acceptContractClaim reverted (is the claim pending and are you the owner?)', 'NOT_REGISTERED')
+        return { kind: 'tx', hash }
+      },
+      async setDomain(appId: bigint, domain: string): Promise<TxHandle> {
+        const { account, wallet: w } = needAccount()
+        const c = settleCalls.setAppDomain(appId, domain)
+        const hash = await w.sendTransaction({ account, chain: network.chain, to: c.to, data: c.data })
+        const r = await publicClient.waitForTransactionReceipt({ hash, confirmations: 2 })
+        if (r.status !== 'success') throw new VaporError('setAppDomain reverted (are you the owner, and is the domain a lowercase hostname?)', 'NOT_REGISTERED')
         return { kind: 'tx', hash }
       },
       claimable: (appId: bigint, token: Address) => claimable(publicClient, appId, token),

@@ -678,8 +678,9 @@ func (k Keeper) RecordSettlement(ctx sdk.Context, appID uint64, payer []byte, fe
 }
 
 // ComputeQuota applies:  quota = min(max, base + fee_weight * diversity)
-// where diversity = min(1, unique_payers * diversity_target / payments).
-func ComputeQuota(params types.Params, st types.EpochStats) types.Quota {
+// where diversity = min(1, unique_payers * diversity_target / payments) and
+// base is BaseGasPerEpoch only for a domain-verified app (see BaseQuota).
+func ComputeQuota(params types.Params, st types.EpochStats, verified bool) types.Quota {
 	unique := types.HLLEstimate(st.Hll)
 	if unique > st.Payments {
 		unique = st.Payments
@@ -692,7 +693,7 @@ func ComputeQuota(params types.Params, st types.EpochStats) types.Quota {
 		}
 	}
 	earned := st.FeeWeight.Mul(math.NewIntFromUint64(diversityBps)).Quo(math.NewInt(types.MaxBps))
-	total := math.NewIntFromUint64(params.BaseGasPerEpoch).Add(earned)
+	total := math.NewIntFromUint64(BaseQuota(params, verified)).Add(earned)
 	maxQ := math.NewIntFromUint64(params.MaxGasPerEpoch)
 	if total.GT(maxQ) {
 		total = maxQ
@@ -700,7 +701,21 @@ func ComputeQuota(params types.Params, st types.EpochStats) types.Quota {
 	return types.Quota{AppId: st.AppId, Gas: total.Uint64(), UniquePayersEstimate: unique, DiversityBps: uint32(diversityBps)} //nolint:gosec // <= 10000
 }
 
-// QuotaFor returns the app's quota for the current epoch (base quota if it
+// BaseQuota is the protocol-sponsored gas an app gets per epoch without having
+// paid any fees. It is granted ONLY to domain-verified apps: registration is
+// cheap and permissionless, so an unconditional base would let anyone mint
+// fake apps and have the protocol paymaster pay for their gas (the Sybil gap
+// measured in docs/benchmarks/mainnet-sim.md, F-1). Verification is done by
+// governance-appointed attestors, which is the anti-Sybil gate. Unverified
+// apps still earn quota from the fees their contracts generate.
+func BaseQuota(params types.Params, verified bool) uint64 {
+	if !verified {
+		return 0
+	}
+	return params.BaseGasPerEpoch
+}
+
+// QuotaFor returns the app's quota for the current epoch (its base quota if it
 // earned nothing last epoch).
 func (k Keeper) QuotaFor(ctx sdk.Context, appID uint64) types.Quota {
 	epoch, _ := k.CurrentEpoch(ctx)
@@ -712,7 +727,7 @@ func (k Keeper) QuotaFor(ctx sdk.Context, appID uint64) types.Quota {
 	if err == nil && q.Epoch == epoch {
 		return q
 	}
-	return types.Quota{AppId: appID, Epoch: epoch, Gas: k.GetParams(ctx).BaseGasPerEpoch}
+	return types.Quota{AppId: appID, Epoch: epoch, Gas: BaseQuota(k.GetParams(ctx), app.DomainVerified)}
 }
 
 // rolloverEpoch finalizes quotas from the ending epoch's stats and prunes
@@ -729,7 +744,7 @@ func (k Keeper) rolloverEpoch(ctx sdk.Context) error {
 		if err != nil || app.Status != types.APP_STATUS_ACTIVE {
 			return false, nil
 		}
-		q := ComputeQuota(params, st)
+		q := ComputeQuota(params, st, app.DomainVerified)
 		q.Epoch = next
 		return false, k.Quotas.Set(ctx, st.AppId, q)
 	})

@@ -64,7 +64,8 @@ cmd_prepare() {
     --arg tusdc "$(cfg .usdc_erc20)" --arg maxgas "$(cfg .block_max_gas)" --arg burn "$(cfg .gas_burn_bps)" \
     --arg gpmax "$(cfg .guardian_pause_max_blocks)" --arg epoch "$(cfg .epoch_length_blocks)" \
     --arg vote "$(cfg .voting_period)" --arg xvote "$(cfg .expedited_voting_period)" \
-    --arg dep "$(cfg .max_deposit_period)" --arg regfee "$(cfg .registration_fee_credit)" '
+    --arg dep "$(cfg .max_deposit_period)" --arg regfee "$(cfg .registration_fee_credit)" \
+    --arg cprice "$(cfg .credit_price)" --arg qweight "$(cfg .quota_weight)" '
     .genesis_time = $gt
     | .chain_id = $cid
     | .consensus.params.block.max_gas = $maxgas
@@ -85,8 +86,8 @@ cmd_prepare() {
     | .app_state.settle.params.assets = [{
         denom:"'"$USDC"'", enabled:true, symbol:"USDC", decimals:6,
         min_fee:"2000", max_fee:"5000000", micro_threshold:"250000",
-        tab_settle_threshold:"1000000", quota_weight:"1000",
-        credit_price:"1000000000000000"}]
+        tab_settle_threshold:"1000000", quota_weight:$qweight,
+        credit_price:$cprice}]
     | .app_state.erc20.token_pairs = [{erc20_address:$tusdc, denom:"'"$USDC"'", enabled:true, contract_owner:"OWNER_MODULE"}]
     | .app_state.erc20.dynamic_precompiles = [$tusdc]
     | .app_state.gov.params.voting_period = $vote
