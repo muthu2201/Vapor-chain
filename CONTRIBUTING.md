@@ -448,25 +448,23 @@ Reviewers and auditors are especially welcome. Suggested path:
 
 ## 11. Where to start
 
-Good first contributions, in areas that are safe to learn in:
+Every open starter task is on the
+[`good first issue` list](https://github.com/muthu2201/Vapor-chain/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
+Each issue says what to change, where, how to test it and when it's done. The
+first set:
 
-- **Web:** show an app's bonded capital, its base quota and pending unbondings
-  on `apps/web/app/apps/[id]/page.tsx`. The SDK already exposes
-  `apps.bondInfo` and `appsRest(...).bond(appId)`.
-- **Docs:** a CLI cookbook for `x/apps`. Cover `vaporchaind tx apps
-  register | add-contract | bond | unbond` and `vaporchaind q apps quota | bond`,
-  with a real localnet transcript.
-- **SDK tests:** unit tests for REST parsing in `packages/sdk/src/apps.ts`
-  (`bond`, `quota`) against JSON fixtures, with no network.
-- **Chain tests:** table tests for `x/apps` `Params.Validate` edge cases
-  (`bond_denom`, `unbonding_blocks` against the epoch length). Tests only; no
-  behaviour change.
-- **Indexer:** a read-only endpoint `GET /v1/apps/{id}/bonds` for an app's
-  bond history. The indexer already stores the `app_bonded`, `app_unbonding`
-  and `app_unbonded` events in its `app_events` table.
-- **Tooling:** add `shellcheck` for `scripts/**/*.sh` and fix what it reports.
-- **SDK (help wanted):** a gas-limit helper that trims over-declared limits
-  (finding F-5). Discuss the approach in the issue first.
+| issue | area | level |
+|---|---|---|
+| [#1](https://github.com/muthu2201/Vapor-chain/issues/1) show an app's bond, base quota and pending unbondings | web | beginner |
+| [#2](https://github.com/muthu2201/Vapor-chain/issues/2) CLI cookbook for `x/apps` | docs | beginner |
+| [#3](https://github.com/muthu2201/Vapor-chain/issues/3) offline unit tests for `appsRest` parsing | SDK | beginner |
+| [#4](https://github.com/muthu2201/Vapor-chain/issues/4) table tests for `x/apps` `Params.Validate` (tests only) | chain | beginner |
+| [#5](https://github.com/muthu2201/Vapor-chain/issues/5) `GET /v1/apps/{id}/bonds` endpoint | indexer | beginner–intermediate |
+| [#6](https://github.com/muthu2201/Vapor-chain/issues/6) make the shell scripts shellcheck-clean | tooling | beginner |
+| [#7](https://github.com/muthu2201/Vapor-chain/issues/7) gas-limit guidance for integrators (finding F-5) | docs | beginner |
+
+Comment on an issue to claim it before you start, so two people don't do the
+same work.
 
 ---
 
