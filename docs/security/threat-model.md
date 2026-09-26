@@ -185,6 +185,12 @@ load generator, closing GO-2026-6278.
 | GO-2026-5932, unmaintained `x/crypto/openpgp` | `golang.org/x/crypto` | Reached only by the local CLI command `vaporchaind keys unsafe-export-eth-key` (ASCII-armoured key export). Not network-reachable. |
 | `fastify` / `find-my-way` ≤ 5.12.0, `@opentelemetry/*` (6 high, 30 moderate) | `services/bundler` (Alto 0.0.21) | Alto 0.0.21, the latest release, pins `fastify ^4`. The fix needs an Alto release, or a tested override. **Mitigation:** run the bundler behind a reverse proxy that terminates TLS, forwards only `POST` JSON-RPC to Alto's RPC path and limits request size. Don't publish port 4337 directly. |
 
+**Open, fix blocked by dependency pins:**
+
+| advisory | where | assessment |
+|---|---|---|
+| GHSA-w34q-cm8f-9c5x / CVE-2026-81871 (medium): the OTLP log gRPC exporter ignores TLS certificates set in environment variables | `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc` v0.19.0 (chain, pulled in by Cosmos SDK telemetry) | Fixed upstream in v0.21.0, but it can't be taken alone. The v0.21 `otel/log` API removed types that `contrib/bridges/otelslog` v0.18 and the other OpenTelemetry log exporters pinned by Cosmos SDK 0.54.4 still use, so the chain stops compiling (Dependabot PR #9, closed). It only matters if an operator turns OpenTelemetry on by creating `<home>/config/otel.yaml` **and** relies on `OTEL_EXPORTER_OTLP_*CERTIFICATE` / client-certificate variables for CA pinning or mTLS. VaporChain ships no such file. **Mitigation:** leave OTLP log export off, or send it to an OpenTelemetry Collector on localhost that enforces mTLS upstream. Upgrade the whole OpenTelemetry log family together with the Cosmos SDK. |
+
 The vendored Solidity libraries in `contracts/lib` had their own npm, yarn and
 pip tooling manifests removed, so security alerts cover only code this project
 builds or runs. The Solidity sources and license files are unchanged, and the
