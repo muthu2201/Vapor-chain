@@ -1,0 +1,40 @@
+name: Audit finding (non-exploitable)
+description: Hardening ideas, missing checks, invariant gaps or test gaps that cannot be exploited today.
+labels: ["audit", "triage"]
+body:
+  - type: checkboxes
+    attributes:
+      label: Disclosure
+      options:
+        - label: This cannot be used to lose or steal funds, mint credits, bypass the sponsored-lane cap, forge a sponsorship or halt the chain. If it can, I will report it privately via SECURITY.md instead.
+          required: true
+  - type: input
+    id: location
+    attributes:
+      label: Location
+      description: File and line(s), e.g. chain/x/apps/keeper/keeper.go:123, at commit <hash>.
+    validations:
+      required: true
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity (your estimate)
+      options: [informational, low, hardening, test gap]
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Finding
+      description: What is wrong or missing, and which invariant or claim in docs/security/threat-model.md it concerns.
+    validations:
+      required: true
+  - type: textarea
+    id: recommendation
+    attributes:
+      label: Recommendation
+  - type: textarea
+    id: poc
+    attributes:
+      label: Test or proof of concept (optional)
+      render: go

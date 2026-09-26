@@ -1,6 +1,6 @@
-// Copyright (c) 2026 VaporChain / muthu2201. Licensed under the Apache License, Version 2.0.
 // SPDX-License-Identifier: Apache-2.0
-// Provenance: VAPOR-6eabb1be532bdef4 (authorship watermark; see NOTICE)
+// Copyright (c) 2026 VaporChain / muthu2201
+// Provenance: VAPOR-6eabb1be532bdef4
 
 /** Demo shop items; prices in USDC base units (6 decimals). */
 export interface Item {

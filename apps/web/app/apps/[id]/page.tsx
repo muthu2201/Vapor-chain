@@ -1,6 +1,6 @@
-// Copyright (c) 2026 VaporChain / muthu2201. Licensed under the Apache License, Version 2.0.
 // SPDX-License-Identifier: Apache-2.0
-// Provenance: VAPOR-6eabb1be532bdef4 (authorship watermark; see NOTICE)
+// Copyright (c) 2026 VaporChain / muthu2201
+// Provenance: VAPOR-6eabb1be532bdef4
 
 import { notFound } from 'next/navigation'
 import { appsRest, type AppRecord, type Quota } from '@vaporchain/sdk'

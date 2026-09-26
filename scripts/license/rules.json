@@ -1,0 +1,17 @@
+{
+  "_comment": "Which license applies to which path. First matching pattern wins; patterns are JavaScript regular expressions over repo-relative paths. Used by scripts/license/headers.mjs. This is the SDK distribution: everything is Apache-2.0. Changing a rule relicenses files: maintainers only.",
+  "copyright": "Copyright (c) 2026 VaporChain / muthu2201",
+  "provenance": "Provenance: VAPOR-6eabb1be532bdef4",
+  "derivedLine": "Derived from cosmos/evm evmd v0.7.3 (Apache-2.0, Cosmos Labs); see NOTICE.",
+  "rules": [
+    { "pattern": ".*", "license": "Apache-2.0" }
+  ],
+  "exclude": [
+    "^contracts/lib/",
+    "(^|/)node_modules/",
+    "^\\.github/(ISSUE_TEMPLATE/|PULL_REQUEST_TEMPLATE|CODEOWNERS)",
+    "^LICENSES/",
+    "^CODE_OF_CONDUCT\\.md$",
+    "(^|/)(pnpm-lock\\.yaml|package-lock\\.json|go\\.sum|buf\\.lock)$"
+  ]
+}

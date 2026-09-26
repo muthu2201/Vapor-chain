@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2026 VaporChain / muthu2201. Licensed under Apache-2.0.
+// Copyright (c) 2026 VaporChain / muthu2201
 // Provenance: VAPOR-6eabb1be532bdef4
 pragma solidity ^0.8.28;
 

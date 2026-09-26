@@ -1,4 +1,6 @@
-# Copyright 2026 VaporChain / muthu2201. Licensed under Apache-2.0. Provenance: VAPOR-6eabb1be532bdef4
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 VaporChain / muthu2201
+# Provenance: VAPOR-6eabb1be532bdef4
 name: SDK CI
 on:
   push:
@@ -36,3 +38,9 @@ jobs:
       - name: build example contracts
         working-directory: contracts
         run: forge build
+  license-headers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: every source file carries an Apache-2.0 SPDX header
+        run: node scripts/license/headers.mjs

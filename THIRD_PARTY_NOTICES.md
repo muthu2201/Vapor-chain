@@ -1,4 +1,8 @@
-<!-- Copyright 2026 VaporChain / muthu2201. Licensed under Apache-2.0. Provenance: VAPOR-6eabb1be532bdef4 -->
+<!--
+SPDX-License-Identifier: Apache-2.0
+Copyright (c) 2026 VaporChain / muthu2201
+Provenance: VAPOR-6eabb1be532bdef4
+-->
 # Third-party notices (SDK distribution)
 
 This public SDK distribution depends on the following third-party software. Their
@@ -33,5 +37,5 @@ Install these with `forge install` (see README); they are not vendored here.
 - **Skip:Go** REST API — used by the SDK's bridging helpers as a network service.
 
 The `@vaporchain/sdk` ABI files include the ABIs of protocol contracts (e.g. the
-verifying paymaster) purely as data for decoding on-chain events; the protocol
-contract source is not part of this distribution.
+verifying paymaster) purely as data for decoding on-chain events. The protocol
+contract source is on the repository's default branch (AGPL-3.0-only).

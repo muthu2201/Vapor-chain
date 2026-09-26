@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 VaporChain / muthu2201
+#
+# Every change needs a maintainer review. These entries take effect once branch
+# protection has "Require review from Code Owners" enabled.
+*                                   @muthu2201
+/packages/sdk/src/abi/              @muthu2201
+/contracts/src/                     @muthu2201
+/LICENSE                            @muthu2201
+/NOTICE                             @muthu2201
+/TRADEMARKS.md                      @muthu2201
+/SECURITY.md                        @muthu2201
+/scripts/license/                   @muthu2201
+/.github/                           @muthu2201

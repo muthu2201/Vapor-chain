@@ -1,4 +1,8 @@
-<!-- Copyright (c) 2026 VaporChain / muthu2201. Licensed under the Apache License, Version 2.0 (see LICENSE). Provenance: VAPOR-6eabb1be532bdef4 -->
+<!--
+SPDX-License-Identifier: Apache-2.0
+Copyright (c) 2026 VaporChain / muthu2201
+Provenance: VAPOR-6eabb1be532bdef4
+-->
 # VaporChain developer SDK
 
 Build a gasless, USDC-native app on VaporChain in TypeScript. Two packages:

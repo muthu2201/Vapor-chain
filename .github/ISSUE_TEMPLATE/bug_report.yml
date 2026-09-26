@@ -1,0 +1,49 @@
+name: Bug report
+description: Something does not work as documented (not a security vulnerability).
+labels: ["bug", "triage"]
+body:
+  - type: checkboxes
+    attributes:
+      label: Before you file
+      options:
+        - label: This is not a security vulnerability (those go to SECURITY.md, privately).
+          required: true
+        - label: I searched existing issues.
+          required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options: [chain, contracts, sponsor service, indexer, bundler, SDK, React hooks, web app, scripts / localnet, docs, other]
+    validations:
+      required: true
+  - type: input
+    id: commit
+    attributes:
+      label: Commit
+      description: Output of `git rev-parse --short HEAD`.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Exact commands, starting from a clean checkout if possible.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected vs actual
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / output
+      render: shell
+  - type: textarea
+    id: env
+    attributes:
+      label: Environment
+      description: OS, Go / Node / pnpm / Foundry versions (CONTRIBUTING.md §6).

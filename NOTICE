@@ -1,21 +1,28 @@
 VaporChain SDK
-Copyright 2026 VaporChain / muthu2201
+Copyright (c) 2026 VaporChain / muthu2201
 Provenance: VAPOR-6eabb1be532bdef4
 
 Licensed under the Apache License, Version 2.0 (the "License"); you may not use
 these files except in compliance with the License. You may obtain a copy of the
 License in the LICENSE file or at http://www.apache.org/licenses/LICENSE-2.0.
 
-This is the PUBLIC developer distribution of VaporChain: the TypeScript SDK,
-React hooks, developer-facing example contracts, and documentation, released
-under Apache-2.0 so anyone can build apps on VaporChain and launch tokens.
+This is the developer distribution of VaporChain: the TypeScript SDK, React
+hooks, the reference web app, developer-facing example contracts and the
+guides. Every file in it is Apache-2.0, so anything you build with it (an app, a
+wallet, a token) is yours under whatever license you choose.
 
-The VaporChain PROTOCOL (the node `vaporchaind`, its modules, the settlement
-precompile, the off-chain services, and the protocol design) is NOT part of this
-distribution and is proprietary; it is developed in a separate private
-repository. Nothing here grants any right to that protocol code.
+The VaporChain protocol (the node vaporchaind, its modules, the Settle
+precompile and the off-chain services) is open source too. It lives on the
+repository's default branch under AGPL-3.0-only, with the SDK-facing parts
+under Apache-2.0; see the NOTICE file there. Nothing in this distribution
+requires the protocol source.
 
-The authorship provenance fingerprint (VAPOR-6eabb1be532bdef4) is retained in
-these files as an origin watermark; it has no runtime effect.
+Attribution: when you redistribute these files or derivative works, Apache-2.0
+section 4(d) requires you to include this NOTICE file, including the copyright
+and "Provenance" lines above. Keep the SPDX, copyright and Provenance lines in
+file headers as well.
+
+Trademarks: the Apache License grants no rights to the names "VaporChain" or
+"Vapor", or to the VaporChain logos (section 6). See TRADEMARKS.md.
 
 Third-party components and their licenses are listed in THIRD_PARTY_NOTICES.md.

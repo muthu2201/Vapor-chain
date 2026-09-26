@@ -1,7 +1,7 @@
 {
   "name": "vaporchain",
   "private": true,
-  "description": "VaporChain monorepo (proprietary). See LICENSE.",
+  "description": "VaporChain developer distribution: SDK, React hooks, reference app, example contracts (Apache-2.0).",
   "license": "Apache-2.0",
   "packageManager": "pnpm@12.6.0",
   "engines": {

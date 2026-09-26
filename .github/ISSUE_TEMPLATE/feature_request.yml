@@ -1,0 +1,34 @@
+name: Feature or improvement
+description: Propose a change. Critical-path changes need agreement here before any code.
+labels: ["enhancement", "triage"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What is hard or impossible today, and for whom?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: What would you change? For chain changes, cover state compatibility (CONTRIBUTING.md §8.3).
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options: [chain (critical), contracts, services, SDK / React, web app, tooling, docs]
+    validations:
+      required: true
+  - type: checkboxes
+    attributes:
+      label: Contribution
+      options:
+        - label: I would like to implement this myself.

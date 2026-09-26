@@ -1,4 +1,8 @@
-<!-- Copyright 2026 VaporChain / muthu2201. Licensed under Apache-2.0. Provenance: VAPOR-6eabb1be532bdef4 -->
+<!--
+SPDX-License-Identifier: Apache-2.0
+Copyright (c) 2026 VaporChain / muthu2201
+Provenance: VAPOR-6eabb1be532bdef4
+-->
 # VaporChain SDK
 
 Build gasless, USDC-native apps on **VaporChain** — where users pay in USDC with
@@ -9,9 +13,12 @@ This is the **public developer distribution**: the TypeScript SDK, React hooks,
 a no-seed-phrase embedded wallet, developer-facing example contracts, and the
 guides you need to ship. Apache-2.0 licensed.
 
-> The VaporChain protocol (the node and its modules) lives in a separate
-> repository and is proprietary. You do not need it to build on VaporChain — you
-> need this SDK and a network endpoint.
+> The VaporChain protocol (the node and its modules) is open source on this
+> repository's default branch (AGPL-3.0, with the SDK-facing parts Apache-2.0).
+> You don't need it to build on VaporChain: this SDK and a network endpoint are
+> enough. Contributing? Read [`CONTRIBUTING.md`](./CONTRIBUTING.md). Found a
+> vulnerability? Follow [`SECURITY.md`](./SECURITY.md) and don't open a public
+> issue.
 
 ## Install
 
