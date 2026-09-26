@@ -1,0 +1,28 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# Copyright (c) 2026 VaporChain / muthu2201
+#
+# Every change needs a maintainer review. The explicit entries below mark the
+# consensus- and money-critical paths (CONTRIBUTING.md §5 and §8). They take
+# effect once branch protection has "Require review from Code Owners" enabled.
+*                                   @muthu2201
+
+# consensus and money
+/chain/app/                         @muthu2201
+/chain/lane/                        @muthu2201
+/chain/x/                           @muthu2201
+/chain/precompiles/                 @muthu2201
+/chain/proto/                       @muthu2201
+/chain/provenance/                  @muthu2201
+/contracts/src/                     @muthu2201
+/services/sponsor/                  @muthu2201
+/scripts/testnet/                   @muthu2201
+
+# legal, licensing and CI
+/LICENSE                            @muthu2201
+/LICENSES/                          @muthu2201
+/NOTICE                             @muthu2201
+/TRADEMARKS.md                      @muthu2201
+/SECURITY.md                        @muthu2201
+/scripts/license/                   @muthu2201
+/scripts/provenance/                @muthu2201
+/.github/                           @muthu2201

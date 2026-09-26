@@ -1,5 +1,5 @@
-// Copyright (c) 2026 VaporChain / muthu2201. All rights reserved.
-// Proprietary and confidential. See LICENSE at the repository root.
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 VaporChain / muthu2201
 // Provenance: VAPOR-6eabb1be532bdef4
 
 // Package provenance embeds the VaporChain authorship fingerprint into every
@@ -12,9 +12,10 @@
 // those surfaces proves derivation. The fingerprint deliberately has NO effect
 // on consensus safety or liveness: changing it does not break a copy, so it
 // cannot be used as a kill switch against honest users of a fork, and it can
-// never harm VaporChain's own validators. Protection comes from the LICENSE,
-// from keeping the repository private and from the evidence these markers
-// provide, never from hidden sabotage.
+// never harm VaporChain's own validators. Protection comes from the licenses
+// (AGPL-3.0 requires forks to keep these author attributions and publish their
+// source; see NOTICE), from the trademark policy and from the evidence these
+// markers provide, never from hidden sabotage.
 package provenance
 
 import (
@@ -35,7 +36,7 @@ const (
 	// Owner is the copyright holder.
 	Owner = "VaporChain / muthu2201"
 	// Notice is the human-readable copyright line.
-	Notice = "Copyright (c) 2026 VaporChain / muthu2201. All rights reserved."
+	Notice = "Copyright (c) 2026 VaporChain / muthu2201. Licensed under AGPL-3.0-only; see NOTICE."
 )
 
 // These are overridden at link time by the Makefile (-X flags) so every

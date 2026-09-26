@@ -1,5 +1,6 @@
-// Copyright (c) 2026 VaporChain / muthu2201. All rights reserved.
-// Derived from cosmos/evm evmd (Apache-2.0). See NOTICE.
+// SPDX-License-Identifier: Apache-2.0 AND AGPL-3.0-only
+// Copyright (c) 2026 VaporChain / muthu2201
+// Derived from cosmos/evm evmd v0.7.3 (Apache-2.0, Cosmos Labs); see NOTICE.
 // Provenance: VAPOR-6eabb1be532bdef4
 
 package app

@@ -1,4 +1,8 @@
-<!-- Copyright (c) 2026 VaporChain / muthu2201. All rights reserved. Provenance: VAPOR-6eabb1be532bdef4 -->
+<!--
+SPDX-License-Identifier: Apache-2.0
+Copyright (c) 2026 VaporChain / muthu2201
+Provenance: VAPOR-6eabb1be532bdef4
+-->
 # Launch your token on VaporChain
 
 A step-by-step guide to shipping an ERC-20 and, optionally, making it a

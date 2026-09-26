@@ -1,14 +1,81 @@
 VaporChain
-Copyright (c) 2026 VaporChain / muthu2201. All rights reserved.
+Copyright (c) 2026 VaporChain / muthu2201
 Provenance: VAPOR-6eabb1be532bdef4
 
-This product includes software derived from the Cosmos EVM project ("evmd"
-example application), Copyright (c) Interchain Foundation and cosmos/evm
-authors, licensed under the Apache License, Version 2.0. Portions of
-chain/app, chain/cmd and related wiring are derived from that source and remain
-under Apache-2.0; see THIRD_PARTY_NOTICES.md for the full list of third-party
-components, their copyrights and licenses, and a copy of the Apache-2.0 license
-where required.
+VaporChain is open source. Every source file names its license in an
+SPDX-License-Identifier header. scripts/license/rules.json is the authoritative
+path-to-license map, and CI checks each file's header against it. In summary:
 
-All other files, and the VaporChain protocol design as a whole, are proprietary
-and confidential under the repository LICENSE.
+  AGPL-3.0-only    The protocol: chain/ (node, modules, Settle precompile,
+                   sponsored lane, RPC), services/, the protocol contracts
+                   (contracts/src/paymaster), contract tests and scripts,
+                   deploy/, tools/, scripts/, and CI configuration.
+                   Text: LICENSE (also LICENSES/AGPL-3.0-only.txt).
+
+  Apache-2.0       What applications build on: packages/sdk, packages/react,
+                   apps/web, contracts/src/{interfaces,checkout,examples,
+                   tokens,utils}, chain/precompiles/settle/ISettle.sol,
+                   chain/proto, docs/sdk, scripts/gen-abis.mjs.
+                   Text: LICENSES/Apache-2.0.txt (and LICENSE in each package).
+
+  CC-BY-4.0        Documentation: Markdown files outside the Apache-2.0 paths.
+                   Text: LICENSES/CC-BY-4.0.txt.
+
+  Third-party      contracts/lib/** and all dependencies keep their own
+                   licenses; see THIRD_PARTY_NOTICES.md.
+
+Building an app, wallet or token on VaporChain with the Apache-2.0 SDK,
+interfaces and examples does NOT place your code under the AGPL.
+
+
+ADDITIONAL TERMS UNDER SECTION 7 OF THE GNU AFFERO GENERAL PUBLIC LICENSE v3
+
+The following additional terms apply to every file licensed AGPL-3.0-only
+(including the AGPL-3.0-only part of "Apache-2.0 AND AGPL-3.0-only" files), as
+permitted by section 7 of the AGPL:
+
+  1. Attribution (section 7(b)). You must preserve in every copy, and in every
+     modified version, of the covered files: the copyright notices, the
+     SPDX-License-Identifier lines, the "Provenance: VAPOR-6eabb1be532bdef4"
+     author-attribution lines in file headers, the author-attribution constants
+     in chain/provenance/provenance.go, and this NOTICE file.
+
+  2. No misrepresentation of origin (section 7(c)). Modified versions must be
+     marked as changed from the original, and must not be presented as the
+     official VaporChain software or as the VaporChain network.
+
+  3. Trademarks (section 7(e)). This license grants no right to use the
+     names "VaporChain" or "Vapor", or the VaporChain logos, except as
+     TRADEMARKS.md allows.
+
+
+UPSTREAM NOTICES
+
+This product includes software derived from Cosmos EVM (github.com/cosmos/evm,
+the "evmd" example application, v0.7.3), licensed under the Apache License,
+Version 2.0. The upstream NOTICE file is reproduced below as section 4(d) of
+that license requires:
+
+    NOTICE
+
+    About Cosmos Labs
+
+    Cosmos Labs is the development and growth organization behind the Cosmos stack of technologies and ecosystem, the world leading blockchain platform powering more than 200 production chains in finance, payments, and real-world assets. Cosmos Labs leads the development of the Cosmos technology stack, including the Cosmos SDK, CometBFT, and IBC protocols that enable sovereign, interoperable blockchains, in tandem with the Interchain Foundation. Cosmos Labs offers blockchain solutions for enterprises and finance, learn more by visiting:  https://cosmos.network/, https://cosmoslabs.io/
+
+    Licence
+
+    This product This product includes software developed by Cosmos Labs and is licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance with the License. You may obtain a copy of the License at: http://www.apache.org/licenses/LICENSE-2.0 Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+
+    Attribution
+
+    If you distribute this software or derivative works, you must include a copy of this NOTICE file (or equivalent attribution) in your distribution, as required by Section 4(d) of the Apache License, Version 2.0.
+
+Files derived from evmd say "Derived from cosmos/evm evmd" in their header:
+chain/app/{app,export,mempool,tx_verifier,upgrades}.go,
+chain/app/config/{bech32,config,permissions}.go and
+chain/cmd/vaporchaind/cmd/root.go. Their upstream portions remain under
+Apache-2.0. VaporChain's modifications are under the license named in each
+file's header.
+
+The full list of third-party components and their licenses is in
+THIRD_PARTY_NOTICES.md.

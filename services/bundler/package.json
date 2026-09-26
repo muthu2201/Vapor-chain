@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "description": "VaporChain ERC-4337 bundler (Pimlico Alto) pinned + configured for the sponsored lane",
-  "license": "SEE LICENSE IN ../../LICENSE",
+  "license": "AGPL-3.0-only",
   "scripts": {
     "start": "alto --config ./alto.config.json"
   },

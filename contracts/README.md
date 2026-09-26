@@ -1,3 +1,8 @@
+<!--
+SPDX-License-Identifier: CC-BY-4.0
+Copyright (c) 2026 VaporChain / muthu2201
+Provenance: VAPOR-6eabb1be532bdef4
+-->
 # VaporChain contracts
 
 Foundry workspace (solc 0.8.37, evm `prague`, via-IR, 1M optimizer runs).

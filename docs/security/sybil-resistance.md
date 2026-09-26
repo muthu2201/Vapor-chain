@@ -1,4 +1,8 @@
-<!-- Copyright (c) 2026 VaporChain / muthu2201. All rights reserved. Provenance: VAPOR-6eabb1be532bdef4 -->
+<!--
+SPDX-License-Identifier: CC-BY-4.0
+Copyright (c) 2026 VaporChain / muthu2201
+Provenance: VAPOR-6eabb1be532bdef4
+-->
 # Sybil resistance without gatekeepers
 
 **Question:** how does the protocol decide which apps get free (sponsored) gas

@@ -1,5 +1,6 @@
-// Copyright (c) 2026 VaporChain / muthu2201. All rights reserved.
-// Proprietary. See LICENSE. Provenance: VAPOR-6eabb1be532bdef4
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 VaporChain / muthu2201
+// Provenance: VAPOR-6eabb1be532bdef4
 
 import { http, type Account, type Address, type Chain, type Hex, type PublicClient, type Transport } from 'viem'
 import type { PrivateKeyAccount } from 'viem/accounts'

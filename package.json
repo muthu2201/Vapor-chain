@@ -1,8 +1,8 @@
 {
   "name": "vaporchain",
   "private": true,
-  "description": "VaporChain monorepo (proprietary). See LICENSE.",
-  "license": "SEE LICENSE IN LICENSE",
+  "description": "VaporChain monorepo. Per-path licenses (AGPL-3.0-only / Apache-2.0 / CC-BY-4.0): see NOTICE.",
+  "license": "AGPL-3.0-only",
   "packageManager": "pnpm@12.6.0",
   "engines": {
     "node": ">=22"

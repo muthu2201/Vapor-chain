@@ -1,6 +1,7 @@
 # build outputs
 chain/build/
 tools/*/bin/
+tools/loadgen/loadgen
 services/*/bin/
 contracts/out/
 contracts/cache/

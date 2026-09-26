@@ -1,4 +1,8 @@
-<!-- Copyright (c) 2026 VaporChain / muthu2201. All rights reserved. Provenance: VAPOR-6eabb1be532bdef4 -->
+<!--
+SPDX-License-Identifier: CC-BY-4.0
+Copyright (c) 2026 VaporChain / muthu2201
+Provenance: VAPOR-6eabb1be532bdef4
+-->
 # VaporChain architecture
 
 VaporChain is a low-cost consumer EVM appchain where users pay in **USDC** with
@@ -310,7 +314,10 @@ The same 32-byte fingerprint is planted in the binary, the on-chain council
 genesis record, `SETTLE.provenance()`, every protocol Solidity contract, the TS
 SDK, and file headers (`chain/provenance`, `scripts/provenance/scan.sh`). It is
 **forensic evidence only** — it has no effect on consensus and is not a
-kill-switch. Real protection is the LICENSE plus keeping the repository private.
+kill-switch. Real protection is legal: AGPL-3.0 makes a fork publish its source
+(including when it only runs the code as a network service) and keep these
+author attributions (`NOTICE`, section 7 terms), and the name is not licensed
+(`TRADEMARKS.md`).
 Honest limitation: code watermarks cannot stop an AI from rewriting the code;
 they prove derivation of *this* code, which is a legal lever, not a technical
 lock.

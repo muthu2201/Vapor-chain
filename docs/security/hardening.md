@@ -1,4 +1,8 @@
-<!-- Copyright (c) 2026 VaporChain / muthu2201. All rights reserved. Provenance: VAPOR-6eabb1be532bdef4 -->
+<!--
+SPDX-License-Identifier: CC-BY-4.0
+Copyright (c) 2026 VaporChain / muthu2201
+Provenance: VAPOR-6eabb1be532bdef4
+-->
 # VaporChain hardening audit — revenue & capital-drain review
 
 This is the write-up of a targeted audit whose brief was blunt: **find every
@@ -181,13 +185,15 @@ An honest engineering answer has to separate what is *enforceable* from what is
   inspecting and censoring contract bytecode at consensus — which breaks EVM
   equivalence, is trivially evadable (obfuscated bytecode, proxies), and turns
   the chain into something no serious project would build on. We did not do it.
-- **You cannot patch away forks.** The source is forkable by definition (and
-  the upstream `cosmos/evm` / geth components are LGPL). A fork on a *different*
-  chain is outside our consensus entirely; no on-chain mechanism can reach it.
-  The defenses against forks are **legal** (the proprietary LICENSE on the main
-  branch, the provenance watermark `VAPOR-6eabb1be532bdef4` and canary embedded
-  for forensic attribution) and **economic** (the network effect of the
-  registry-gated rails below), not technical kill-switches.
+- **You cannot patch away forks.** The source is open and forkable by design
+  (AGPL-3.0 for the protocol, Apache-2.0 for the SDK; see `NOTICE`). A fork on a
+  *different* chain is outside our consensus entirely; no on-chain mechanism can
+  reach it. The defenses against forks are **legal** (AGPL-3.0 obliges a fork to
+  publish its source, including when it only runs the code as a network service,
+  and to keep the author attributions, the provenance line
+  `VAPOR-6eabb1be532bdef4` among them; the names and logos are not licensed, see
+  `TRADEMARKS.md`) and **economic** (the network effect of the registry-gated
+  rails below), not technical kill-switches.
 - **No confiscation, no backdoors, no kill-switches.** The watermarks are
   forensic-only. There is no admin path that seizes user funds, freezes an
   unaffiliated contract, or disables a competitor. Adding one would be the

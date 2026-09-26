@@ -1,10 +1,14 @@
-<!-- Copyright (c) 2026 VaporChain / muthu2201. All rights reserved. Provenance: VAPOR-6eabb1be532bdef4 -->
+<!--
+SPDX-License-Identifier: CC-BY-4.0
+Copyright (c) 2026 VaporChain / muthu2201
+Provenance: VAPOR-6eabb1be532bdef4
+-->
 # Third-party notices
 
 VaporChain depends on and, in places, derives from third-party software. This
-file lists those components and their licenses. Inclusion here does not place any
-proprietary VaporChain code under these licenses; it records the terms of the
-third-party parts. Pinned versions are in `chain/go.mod`, `services/*/go.mod`,
+file lists those components and their licenses. Inclusion here does not change
+the license of any VaporChain file (see `NOTICE` for which license covers which
+path); it records the terms of the third-party parts. Pinned versions are in `chain/go.mod`, `services/*/go.mod`,
 `contracts/foundry.toml` / `contracts/lib`, and the JS lockfile.
 
 ## Chain / Go

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "description": "VaporChain reference app: gasless USDC checkout, embedded wallet, token launchpad, app dashboard",
-  "license": "SEE LICENSE IN LICENSE",
+  "license": "Apache-2.0",
   "type": "module",
   "scripts": {
     "dev": "next dev",

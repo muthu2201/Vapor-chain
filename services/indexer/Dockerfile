@@ -1,5 +1,6 @@
-# Copyright (c) 2026 VaporChain / muthu2201. All rights reserved.
-# Proprietary. See LICENSE. Provenance: VAPOR-6eabb1be532bdef4
+# SPDX-License-Identifier: AGPL-3.0-only
+# Copyright (c) 2026 VaporChain / muthu2201
+# Provenance: VAPOR-6eabb1be532bdef4
 #
 # vapor-indexer image. Build from services/indexer:
 #   docker build -f services/indexer/Dockerfile -t vaporchain/indexer:latest services/indexer

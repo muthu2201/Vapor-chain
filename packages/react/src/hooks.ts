@@ -1,5 +1,6 @@
-// Copyright (c) 2026 VaporChain / muthu2201. All rights reserved.
-// Proprietary. See LICENSE. Provenance: VAPOR-6eabb1be532bdef4
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 VaporChain / muthu2201
+// Provenance: VAPOR-6eabb1be532bdef4
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useRef, useState } from 'react'

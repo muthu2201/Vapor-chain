@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability (private)
+    url: https://github.com/muthu2201/Vapor-chain/security/advisories/new
+    about: Never report vulnerabilities in public issues. This opens a private advisory (see SECURITY.md).
+  - name: Contributor guide
+    url: https://github.com/muthu2201/Vapor-chain/blob/HEAD/CONTRIBUTING.md
+    about: How the project is built, how to set up and test, and what not to touch.
