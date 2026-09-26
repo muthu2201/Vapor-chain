@@ -58,6 +58,30 @@ export const settleAbi = [
   },
   {
     "type": "function",
+    "name": "appBond",
+    "inputs": [
+      {
+        "name": "appId",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "bonded",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "baseGasPerEpoch",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "appOf",
     "inputs": [
       {
@@ -105,6 +129,35 @@ export const settleAbi = [
         "name": "",
         "type": "bool",
         "internalType": "bool"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "bondApp",
+    "inputs": [
+      {
+        "name": "appId",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "token",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "bonded",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "nonpayable"
@@ -438,30 +491,6 @@ export const settleAbi = [
   },
   {
     "type": "function",
-    "name": "setAppDomain",
-    "inputs": [
-      {
-        "name": "appId",
-        "type": "uint64",
-        "internalType": "uint64"
-      },
-      {
-        "name": "domain",
-        "type": "string",
-        "internalType": "string"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "verified",
-        "type": "bool",
-        "internalType": "bool"
-      }
-    ],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "tabPay",
     "inputs": [
       {
@@ -490,6 +519,35 @@ export const settleAbi = [
         "name": "settled",
         "type": "bool",
         "internalType": "bool"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "unbondApp",
+    "inputs": [
+      {
+        "name": "appId",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "token",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "releaseHeight",
+        "type": "uint64",
+        "internalType": "uint64"
       }
     ],
     "stateMutability": "nonpayable"

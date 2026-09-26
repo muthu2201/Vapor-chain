@@ -106,8 +106,9 @@ const { appId } = await client.apps.register({
 })
 // attribute your checkout/contract so its revenue and sponsorship route to you:
 await client.apps.acceptContract(appId, checkoutAddress)  // after a proof, see the CLI
-// protocol-sponsored onboarding gas needs a verified domain:
-await client.apps.setDomain(appId, 'shop.example.com')    // then prove control to the attestors
+// protocol-sponsored base gas is bought with bonded (refundable) USDC:
+await client.apps.bond(appId, 10_000_000_000n)            // 10,000 USDC -> base quota
+await client.apps.bondInfo(appId)                         // { bonded, baseGas, unbonding }
 ```
 
 **Who pays gas.** Every transaction pays for the chain's compute at the
@@ -117,9 +118,10 @@ them, from its quota:
 
 - **earned quota** — what your volume earns: `quota_weight` gas per uusdc of
   Settle fee your contracts generate, from the next epoch;
-- **base quota** — a per-epoch onboarding allowance, granted only once the
-  protocol attestors verify your domain (`client.apps.setDomain`, then the DNS
-  proof). Registering alone buys no sponsored gas.
+- **base quota** — bought with USDC you bond behind your app
+  (`client.apps.bond`): `gas_per_bonded_unit` gas per epoch per bonded USDC,
+  refundable via `client.apps.unbond` after the unbonding period. No approval,
+  verification or identity is involved; registering alone buys no sponsored gas.
 
 Users of unregistered contracts pay their own gas, in credits or in USDC via the
 token paymaster.

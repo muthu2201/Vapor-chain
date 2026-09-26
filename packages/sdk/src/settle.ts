@@ -55,9 +55,13 @@ export const settleCalls = {
     to: SETTLE_ADDRESS,
     data: encodeFunctionData({ abi: settleAbi, functionName: 'acceptContractClaim', args: [appId, contract] }),
   }),
-  setAppDomain: (appId: bigint, domain: string) => ({
+  bondApp: (appId: bigint, token: Address, amount: bigint) => ({
     to: SETTLE_ADDRESS,
-    data: encodeFunctionData({ abi: settleAbi, functionName: 'setAppDomain', args: [appId, domain] }),
+    data: encodeFunctionData({ abi: settleAbi, functionName: 'bondApp', args: [appId, token, amount] }),
+  }),
+  unbondApp: (appId: bigint, token: Address, amount: bigint) => ({
+    to: SETTLE_ADDRESS,
+    data: encodeFunctionData({ abi: settleAbi, functionName: 'unbondApp', args: [appId, token, amount] }),
   }),
   buyCredits: (token: Address, amount: bigint) => ({
     to: SETTLE_ADDRESS,
