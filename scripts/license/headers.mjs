@@ -36,7 +36,7 @@ function style(path) {
   return null
 }
 
-const OURS = /^Copyright \(c\) \d{4} VaporChain \/ muthu2201\b/
+const OURS = /^Copyright (\(c\) )?\d{4} VaporChain \/ muthu2201\b/
 const HEADERISH = /^(SPDX-License-Identifier:|Copyright\b|Proprietary|Provenance: VAPOR-|Derived from cosmos\/evm)/
 
 function wanted(path) {
