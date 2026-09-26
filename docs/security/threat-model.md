@@ -157,6 +157,35 @@ enforced and tested. It is written so an auditor can map every claim to code.
   always pay their own gas.
 - **Upstream dependencies** (cosmos/evm, ibc-go, Alto, EntryPoint) carry their
   own risk; versions are pinned and their licenses tracked in
-  `THIRD_PARTY_NOTICES`.
+  `THIRD_PARTY_NOTICES`. Open advisories and their assessment are listed in
+  [Known upstream advisories](#known-upstream-advisories-triaged-2026-09-26).
 - **EIP-7702 delegation** lets a user delegate their EOA to arbitrary code
   outside sponsored flows; the paymaster/sponsor only guard *sponsored* ops.
+
+## Known upstream advisories (triaged 2026-09-26)
+
+These come from `govulncheck` (reachability analysis of the Go modules) and
+`npm audit` (the bundler's lockfile). The SDK / React / web workspace had
+**0** advisories. Re-run the checks with `govulncheck ./...` in each Go module
+and `npm audit --package-lock-only` in `services/bundler`.
+
+**Fixed.** `google.golang.org/grpc` was raised to v1.83.2 in the chain,
+closing GO-2026-6443 (server panic on requests without an `:authority`/Host
+header) and GO-2026-6348 (OOM via HTTP/2 DATA-frame fragmentation).
+`gorilla/websocket` was raised to v1.5.3 in the sponsor, the indexer and the
+load generator, closing GO-2026-6278.
+
+**Open, no upstream fix yet:**
+
+| advisory | where | assessment |
+|---|---|---|
+| GO-2025-3684 / GHSA-mjfq-3qr2-6g84, partial precompile state writes | `cosmos/evm` | The advisory lists no patched version, so every release is flagged. In v0.7.3 `RunNativeAction` snapshots the multistore and records the snapshot in the EVM journal, so a precompile call that errors or runs out of gas is rolled back with its EVM frame. The Settle precompile runs every call through `RunNativeAction` (`chain/precompiles/settle/settle.go`). **Open audit item:** an explicit regression test that runs Settle out of gas mid-execution and asserts no ledger change. |
+| GO-2024-2584 / GHSA-86h5-xcpx-cfqc, slashing evasion by redelegation | `cosmos-sdk` | False positive. The fix shipped in 0.50.5, and the database has no fixed version for the 0.50+ line. This chain runs 0.54.4. |
+| GO-2026-4479, AES-GCM nonce reuse | `pion/dtls/v2` | Reachable only statically, through go-ethereum's `p2p/nat` (STUN), which the node never runs. v2 has no fix. |
+| GO-2026-5932, unmaintained `x/crypto/openpgp` | `golang.org/x/crypto` | Reached only by the local CLI command `vaporchaind keys unsafe-export-eth-key` (ASCII-armoured key export). Not network-reachable. |
+| `fastify` / `find-my-way` ≤ 5.12.0, `@opentelemetry/*` (6 high, 30 moderate) | `services/bundler` (Alto 0.0.21) | Alto 0.0.21, the latest release, pins `fastify ^4`. The fix needs an Alto release, or a tested override. **Mitigation:** run the bundler behind a reverse proxy that terminates TLS, forwards only `POST` JSON-RPC to Alto's RPC path and limits request size. Don't publish port 4337 directly. |
+
+The vendored Solidity libraries in `contracts/lib` had their own npm, yarn and
+pip tooling manifests removed, so security alerts cover only code this project
+builds or runs. The Solidity sources and license files are unchanged, and the
+compiled bytecode was verified identical (115/115 artifacts).

@@ -37,6 +37,11 @@ with a compatible build is possible per the LGPL.
 | OpenZeppelin/openzeppelin-contracts | 5.6.x | MIT | |
 | foundry-rs/forge-std | current | MIT/Apache-2.0 | test-only |
 
+The copies in `contracts/lib` keep their Solidity sources and license files
+unchanged. Their JavaScript and Python tooling manifests (`package.json`,
+`package-lock.json`, `yarn.lock`, `fv-requirements.txt`) were removed because
+the build never uses them.
+
 The canonical EntryPoint v0.8 and Simple7702Account are deployed by replaying
 the audited mainnet CREATE2 payloads; we distribute their addresses, not
 modified source.

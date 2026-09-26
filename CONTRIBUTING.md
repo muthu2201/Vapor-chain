@@ -220,7 +220,7 @@ The concepts you need:
 | `scripts/testnet` | testnet genesis builder + economic params | critical | AGPL-3.0-only |
 | `deploy/` | Docker, compose, systemd, Prometheus alerts | sensitive | AGPL-3.0-only |
 | `.github/workflows` | CI | maintainers only | AGPL-3.0-only |
-| `contracts/lib` | vendored OpenZeppelin, account-abstraction, forge-std | **never modify** | their own |
+| `contracts/lib` | vendored OpenZeppelin, account-abstraction, forge-std (Solidity sources and licenses only; their npm/yarn/pip manifests are removed so security alerts cover only code we run) | **never modify** | their own |
 
 ---
 
