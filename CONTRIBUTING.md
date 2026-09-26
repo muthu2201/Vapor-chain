@@ -114,15 +114,18 @@ VAPOR_E2E_OWNER_KEY=0x… pnpm --filter @vaporchain/react run test:e2e
 
 ## Where to start
 
-- **Web:** show an app's bond, base quota and pending unbondings on
-  `apps/web/app/apps/[id]/page.tsx`, using `apps.bondInfo` or
-  `appsRest(...).bond(appId)`.
-- **SDK tests:** offline unit tests for REST parsing in
-  `packages/sdk/src/apps.ts` (`bond`, `quota`) against JSON fixtures.
-- **Docs:** fill gaps in `docs/sdk/`. Useful additions are error-handling
-  recipes and a sponsored-quota walkthrough.
-- **SDK (help wanted):** a helper that trims over-declared gas limits (protocol
-  finding F-5). Discuss the approach in an issue first.
+Starter tasks are tracked as issues on the repository, under the
+[`good first issue` label](https://github.com/muthu2201/Vapor-chain/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
+The ones that touch this distribution:
+
+| issue | area |
+|---|---|
+| [#1](https://github.com/muthu2201/Vapor-chain/issues/1) show an app's bond, base quota and pending unbondings | web app |
+| [#3](https://github.com/muthu2201/Vapor-chain/issues/3) offline unit tests for `appsRest` parsing | SDK |
+| [#7](https://github.com/muthu2201/Vapor-chain/issues/7) gas-limit guidance for integrators (finding F-5) | docs |
+
+These land on the default branch first, and the maintainer ports them here.
+Comment on an issue to claim it before you start.
 
 ## Licensing of contributions
 
