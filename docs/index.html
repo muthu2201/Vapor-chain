@@ -1,0 +1,393 @@
+<!doctype html>
+<!--
+SPDX-License-Identifier: CC-BY-4.0
+Copyright (c) 2026 VaporChain / muthu2201
+Provenance: VAPOR-6eabb1be532bdef4
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>VaporChain · Pay in USDC with one signature</title>
+<meta name="description" content="Open-source EVM appchain for one-signature, gasless USDC payments. Apps keep half of every fee to pay their users' gas. Cosmos SDK + cosmos/evm, ERC-4337 + EIP-7702. Pre-audit; contributors and auditors welcome.">
+<link rel="canonical" href="https://muthu2201.github.io/Vapor-chain/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="VaporChain">
+<meta property="og:title" content="VaporChain: pay in USDC with one signature, no gas token">
+<meta property="og:description" content="Open-source EVM appchain for one-signature, gasless USDC payments. Apps keep half of every fee to pay their users' gas. Cosmos SDK + cosmos/evm, ERC-4337 + EIP-7702. Pre-audit; contributors and auditors welcome.">
+<meta property="og:url" content="https://muthu2201.github.io/Vapor-chain/">
+<meta property="og:image" content="https://muthu2201.github.io/Vapor-chain/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="VaporChain: Pay in USDC. One signature. No gas token. A block diagram showing the 50% sponsored-lane cap.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="VaporChain: pay in USDC with one signature, no gas token">
+<meta name="twitter:description" content="Open-source EVM appchain for one-signature, gasless USDC payments. Apps keep half of every fee to pay their users' gas. Cosmos SDK + cosmos/evm, ERC-4337 + EIP-7702. Pre-audit; contributors and auditors welcome.">
+<meta name="twitter:image" content="https://muthu2201.github.io/Vapor-chain/og.png">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23176A6F'/%3E%3Cpath d='M16 4v24' stroke='%23E3A15C' stroke-width='3'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#EEF2F0; --surface:#F8FAF9; --ink:#0F2327; --muted:#4A5F62; --rule:#CBD6D3;
+  --accent:#176A6F; --accent-soft:#D5E6E4; --signal:#B0621C; --signal-soft:#F2E3D2;
+  --lane-a:#176A6F; --lane-b:#9CC5C2;
+  --display:"Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --body:"IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0B1517; --surface:#112126; --ink:#DDE8E6; --muted:#93A8A7; --rule:#23383C;
+    --accent:#5CB6B2; --accent-soft:#16363A; --signal:#E3A15C; --signal-soft:#3A2A18;
+    --lane-a:#5CB6B2; --lane-b:#2C5558;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0B1517; --surface:#112126; --ink:#DDE8E6; --muted:#93A8A7; --rule:#23383C;
+  --accent:#5CB6B2; --accent-soft:#16363A; --signal:#E3A15C; --signal-soft:#3A2A18;
+  --lane-a:#5CB6B2; --lane-b:#2C5558;
+}
+
+*{box-sizing:border-box}
+:root{padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px)}
+body{background:var(--bg); color:var(--ink); font-family:var(--body); font-size:16px; line-height:1.6; margin:0}
+.wrap{max-width:1080px; margin:0 auto; padding-inline:20px}
+a{color:var(--accent); text-underline-offset:3px}
+a:focus-visible, .btn:focus-visible{outline:3px solid var(--signal); outline-offset:3px; border-radius:4px}
+code, .mono{font-family:var(--mono); font-size:.88em}
+h1,h2,h3{font-family:var(--display); text-wrap:balance; margin:0; line-height:1.1}
+h2{font-size:clamp(1.7rem, 3.4vw, 2.4rem); font-weight:800; letter-spacing:-.01em}
+h3{font-size:1.15rem; font-weight:600}
+p{margin:0}
+.eyebrow{font-family:var(--mono); font-size:.78rem; letter-spacing:.08em; text-transform:uppercase; color:var(--muted)}
+.lede{color:var(--muted); max-width:62ch}
+
+/* header */
+.top{display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; padding-block:20px}
+.brand{font-family:var(--display); font-weight:800; font-size:1.25rem; color:var(--ink); text-decoration:none; letter-spacing:-.01em}
+.brand span{color:var(--accent)}
+.nav{display:flex; gap:18px; flex-wrap:wrap; font-size:.92rem}
+.nav a{color:var(--muted); text-decoration:none}
+.nav a:hover{color:var(--ink)}
+
+/* hero */
+.hero{display:grid; grid-template-columns:1.15fr 1fr; gap:48px; align-items:center; padding-block:40px 64px}
+.hero h1{font-size:clamp(2.3rem, 5.2vw, 3.7rem); font-weight:800; letter-spacing:-.02em; margin-block:14px 18px}
+.hero h1 em{font-style:normal; color:var(--accent)}
+.hero .lede{font-size:1.08rem}
+.ctas{display:flex; flex-wrap:wrap; gap:12px; margin-top:26px}
+.btn{display:inline-flex; align-items:center; gap:8px; padding:11px 18px; border-radius:6px; font-weight:600; font-size:.95rem; text-decoration:none; border:1.5px solid var(--ink); color:var(--ink)}
+.btn.primary{background:var(--ink); color:var(--bg)}
+.btn:hover{border-color:var(--accent)}
+.btn.primary:hover{background:var(--accent); border-color:var(--accent)}
+.chips{display:flex; flex-wrap:wrap; gap:8px; margin-top:22px}
+.chip{font-family:var(--mono); font-size:.76rem; padding:4px 9px; border:1px solid var(--rule); border-radius:4px; color:var(--muted); background:var(--surface)}
+.chip.warn{border-color:var(--signal); color:var(--signal); background:var(--signal-soft)}
+
+/* block figure */
+.block{margin:0; background:var(--surface); border:1px solid var(--rule); border-radius:10px; padding:22px}
+.block .hd{display:flex; justify-content:space-between; gap:12px; font-family:var(--mono); font-size:.78rem; color:var(--muted)}
+.bar{position:relative; display:flex; height:84px; margin-top:14px; border-radius:6px; overflow:hidden; border:1px solid var(--rule)}
+.bar .lane{flex:0 0 50%; background:repeating-linear-gradient(135deg, var(--lane-a) 0 7px, var(--lane-b) 7px 14px); display:flex; align-items:flex-end; padding:8px 10px}
+.bar .paid{flex:1; background:var(--accent-soft); display:flex; align-items:flex-end; justify-content:flex-end; padding:8px 10px}
+.bar .lane span{font-family:var(--mono); font-size:.74rem; background:var(--surface); color:var(--ink); padding:2px 6px; border-radius:3px}
+.bar .paid span{font-family:var(--mono); font-size:.74rem; color:var(--ink)}
+.cap{position:absolute; left:50%; top:-1px; bottom:-1px; width:3px; margin-left:-1.5px; background:var(--signal)}
+.capnote{display:flex; justify-content:center; margin-top:8px}
+.capnote span{font-family:var(--mono); font-size:.76rem; color:var(--signal); background:var(--signal-soft); padding:3px 8px; border-radius:4px}
+.block p{font-size:.9rem; color:var(--muted); margin-top:14px}
+.block p strong{color:var(--ink); font-weight:600}
+
+section{padding-block:64px; border-top:1px solid var(--rule)}
+.sec-hd{display:grid; gap:12px; margin-bottom:34px; max-width:720px}
+
+/* flow */
+.flow{display:grid; grid-template-columns:repeat(5, 1fr); gap:0; counter-reset:step}
+.step{padding:0 18px 0 0; position:relative}
+.step + .step{padding-left:18px; border-left:1px solid var(--rule)}
+.step .n{font-family:var(--mono); font-size:.78rem; color:var(--signal); display:block; margin-bottom:8px}
+.step h3{margin-bottom:8px}
+.step p{font-size:.92rem; color:var(--muted)}
+
+.split{margin-top:44px; background:var(--surface); border:1px solid var(--rule); border-radius:10px; padding:22px}
+.split .hd{display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px}
+.splitbar{display:flex; height:44px; margin-top:14px; border-radius:6px; overflow:hidden; font-family:var(--mono); font-size:.8rem}
+.splitbar div{display:flex; align-items:center; padding-inline:10px; white-space:nowrap; overflow:hidden}
+.s-app{flex:50; background:var(--accent); color:var(--bg)}
+.s-val{flex:20; background:var(--lane-b); color:var(--ink)}
+.s-tre{flex:20; background:var(--accent-soft); color:var(--ink)}
+.s-rel{flex:10; background:var(--signal-soft); color:var(--ink)}
+.legend{display:flex; flex-wrap:wrap; gap:6px 20px; margin-top:12px; font-size:.86rem; color:var(--muted)}
+.legend b{color:var(--ink); font-weight:600; font-variant-numeric:tabular-nums}
+
+/* architecture */
+.stack{display:grid; gap:10px}
+.layer{display:grid; grid-template-columns:200px 1fr; gap:20px; align-items:start; background:var(--surface); border:1px solid var(--rule); border-radius:8px; padding:16px 18px}
+.layer.core{border-color:var(--accent); box-shadow:inset 4px 0 0 var(--accent)}
+.layer .name{font-family:var(--display); font-weight:600; font-size:1.02rem}
+.layer .name small{display:block; font-family:var(--mono); font-weight:400; font-size:.74rem; color:var(--muted); margin-top:3px}
+.parts{display:flex; flex-wrap:wrap; gap:8px}
+.part{font-size:.88rem; border:1px solid var(--rule); border-radius:5px; padding:5px 9px; background:var(--bg)}
+.part code{color:var(--accent)}
+.arrow{font-family:var(--mono); font-size:.76rem; color:var(--muted); padding-left:18px}
+
+/* design choices */
+.choices{display:grid; grid-template-columns:repeat(2, 1fr); gap:36px 48px}
+.choice h3{font-size:1.25rem; margin-bottom:10px}
+.choice p{color:var(--muted)}
+.choice .where{display:inline-block; margin-top:12px; font-family:var(--mono); font-size:.78rem; color:var(--accent)}
+
+/* numbers */
+.nums{display:grid; grid-template-columns:repeat(4, 1fr); border-top:1px solid var(--rule); border-left:1px solid var(--rule)}
+.num{padding:20px 18px; border-right:1px solid var(--rule); border-bottom:1px solid var(--rule); background:var(--surface)}
+.num b{display:block; font-family:var(--display); font-weight:800; font-size:1.9rem; letter-spacing:-.01em; font-variant-numeric:tabular-nums; color:var(--ink)}
+.num span{display:block; margin-top:6px; font-size:.86rem; color:var(--muted); line-height:1.45}
+.note{margin-top:14px; font-size:.86rem; color:var(--muted); max-width:78ch}
+
+/* stack table */
+.specs{overflow-x:auto}
+.specs table{border-collapse:collapse; width:100%; min-width:520px; font-size:.92rem}
+.specs th, .specs td{text-align:left; padding:10px 12px; border-bottom:1px solid var(--rule); vertical-align:top}
+.specs th{font-family:var(--mono); font-weight:500; font-size:.78rem; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); width:180px}
+
+/* status + involve */
+.status{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+.stat{background:var(--surface); border:1px solid var(--rule); border-radius:8px; padding:18px}
+.stat.no{border-color:var(--signal)}
+.stat h3{font-size:1rem; margin-bottom:8px}
+.stat ul{margin:0; padding-left:18px; color:var(--muted); font-size:.92rem}
+.stat li + li{margin-top:4px}
+.involve{display:grid; grid-template-columns:repeat(4, 1fr); gap:14px}
+.card{display:flex; flex-direction:column; gap:8px; padding:18px; border:1px solid var(--rule); border-radius:8px; background:var(--surface); color:var(--ink); text-decoration:none}
+.card:hover{border-color:var(--accent)}
+.card h3{font-size:1.05rem}
+.card p{font-size:.9rem; color:var(--muted); flex:1}
+.card .go{font-family:var(--mono); font-size:.8rem; color:var(--accent)}
+
+footer{border-top:1px solid var(--rule); padding-block:28px 40px; font-size:.86rem; color:var(--muted)}
+footer .row{display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap}
+
+@media (max-width: 900px){
+  .hero{grid-template-columns:1fr; gap:32px}
+  .flow{grid-template-columns:1fr; gap:18px}
+  .step, .step + .step{padding:0 0 0 16px; border-left:2px solid var(--rule)}
+  .choices{grid-template-columns:1fr}
+  .nums{grid-template-columns:repeat(2, 1fr)}
+  .involve{grid-template-columns:repeat(2, 1fr)}
+  .layer{grid-template-columns:1fr; gap:10px}
+}
+@media (max-width: 560px){
+  .nums, .involve, .status{grid-template-columns:1fr}
+  .splitbar div{font-size:.72rem; padding-inline:6px}
+  .splitbar .lbl{display:none}
+}
+@media (prefers-reduced-motion: no-preference){
+  .bar .lane{background-size:200% 100%; animation:drift 14s linear infinite}
+  @keyframes drift{from{background-position:0 0} to{background-position:-40px 0}}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="brand" href="https://github.com/muthu2201/Vapor-chain">Vapor<span>Chain</span></a>
+    <nav class="nav" aria-label="Sections">
+      <a href="#how">How it works</a>
+      <a href="#architecture">Architecture</a>
+      <a href="#design">Design</a>
+      <a href="#numbers">Numbers</a>
+      <a href="#involved">Get involved</a>
+    </nav>
+  </header>
+
+  <div class="hero">
+    <div>
+      <span class="eyebrow">Open-source EVM appchain for payments</span>
+      <h1>Pay in <em>USDC</em>. One signature. No gas token.</h1>
+      <p class="lede">VaporChain is a Cosmos SDK chain with a full EVM, built for consumer payments. Someone holding only USDC can check out with one signature and no seed phrase. Apps keep half of every fee and use it to pay their users' gas.</p>
+      <div class="ctas">
+        <a class="btn primary" href="https://github.com/muthu2201/Vapor-chain">Read the code</a>
+        <a class="btn" href="https://github.com/muthu2201/Vapor-chain/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22">Pick a first issue</a>
+        <a class="btn" href="https://github.com/muthu2201/Vapor-chain/blob/main/ARCHITECTURE.md">Architecture doc</a>
+      </div>
+      <div class="chips">
+        <span class="chip">AGPL-3.0 protocol</span>
+        <span class="chip">Apache-2.0 SDK</span>
+        <span class="chip warn">Not yet audited</span>
+      </div>
+    </div>
+
+    <figure class="block" aria-label="How one block's gas is shared">
+      <div class="hd"><span>One block · 40,000,000 gas</span><span>~1 s</span></div>
+      <div class="bar" role="img" aria-label="Half of the block is the sponsored lane, half is paid transactions, with a hard cap at 50 percent">
+        <div class="lane"><span>sponsored lane</span></div>
+        <div class="paid"><span>paid transactions</span></div>
+        <div class="cap"></div>
+      </div>
+      <div class="capnote"><span>cap 50% · measured max 0.500</span></div>
+      <p>Gas that apps pay for their users may use <strong>at most half of every block</strong>. Validators check this when they vote on a block, using the signer recovered from each transaction's signature, so free transactions can never crowd out paid ones.</p>
+    </figure>
+  </div>
+</div>
+
+<section id="how">
+  <div class="wrap">
+    <div class="sec-hd">
+      <span class="eyebrow">How a payment works</span>
+      <h2>From one tap to settled USDC</h2>
+      <p class="lede">A first-time user with only USDC in their wallet. Five things happen, in this order, inside a single signed operation.</p>
+    </div>
+    <div class="flow">
+      <div class="step"><span class="n">1 · sign</span><h3>One signature</h3><p>The wallet signs one ERC-4337 UserOperation. If it is an ordinary address, EIP-7702 upgrades it to a smart account inside the same operation.</p></div>
+      <div class="step"><span class="n">2 · sponsor</span><h3>Policy check</h3><p>The sponsor service (ERC-7677) confirms the call only touches the app's own contracts and that the app still has gas quota, then signs.</p></div>
+      <div class="step"><span class="n">3 · pay gas</span><h3>Gas covered</h3><p>A bundler submits it and the paymaster pays gas. Its signature covers the chain ID, the paymaster address and every gas field, so it can't be replayed.</p></div>
+      <div class="step"><span class="n">4 · settle</span><h3>USDC moves</h3><p>The app's contract calls the Settle precompile at <code>0x…0900</code>. The chain moves the USDC and splits the fee using integer maths that always adds up exactly.</p></div>
+      <div class="step"><span class="n">5 · include</span><h3>Block rules hold</h3><p>Validators keep sponsored operations under half of the block, and a fee floor keeps spam out: 0 of 8,962 below-floor transactions got in under load.</p></div>
+    </div>
+
+    <div class="split">
+      <div class="hd"><span class="eyebrow">Where a 1% payment fee goes</span><span class="eyebrow">genesis parameters · fee hard-capped at 10%</span></div>
+      <div class="splitbar" role="img" aria-label="App 50 percent, validators 20 percent, treasury 20 percent, relayers 10 percent">
+        <div class="s-app">50%<span class="lbl">&nbsp;app</span></div><div class="s-val">20%<span class="lbl">&nbsp;validators</span></div><div class="s-tre">20%<span class="lbl">&nbsp;treasury</span></div><div class="s-rel">10%<span class="lbl">&nbsp;relay</span></div>
+      </div>
+      <div class="legend"><span><b>50%</b> to the app, which funds its users' gas</span><span><b>20%</b> validators</span><span><b>20%</b> treasury</span><span><b>10%</b> relayers that bring USDC in</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="architecture">
+  <div class="wrap">
+    <div class="sec-hd">
+      <span class="eyebrow">Architecture</span>
+      <h2>Five layers, one job each</h2>
+      <p class="lede">The node is a fork of the cosmos/evm example chain. Everything VaporChain-specific sits in three chain modules, one precompile and a block-space policy. Folder names are the real paths in the repository.</p>
+    </div>
+    <div class="stack">
+      <div class="layer"><div class="name">Apps and wallets<small>apps/web · packages/</small></div><div class="parts"><span class="part">TypeScript SDK (viem)</span><span class="part">React hooks</span><span class="part">embedded wallet, no seed phrase</span><span class="part">Next.js reference app</span></div></div>
+      <div class="arrow">↓ one signed UserOperation</div>
+      <div class="layer"><div class="name">Off-chain services<small>services/</small></div><div class="parts"><span class="part">sponsor: policy + signer (ERC-7677)</span><span class="part">bundler: Alto, ERC-4337 v0.8</span><span class="part">indexer: Postgres + Parquet archive</span></div></div>
+      <div class="arrow">↓ EntryPoint call</div>
+      <div class="layer"><div class="name">Contracts<small>contracts/src</small></div><div class="parts"><span class="part">EntryPoint v0.8</span><span class="part">verifying paymaster</span><span class="part">USDC paymaster (pay gas in USDC)</span><span class="part">checkout + token factory</span></div></div>
+      <div class="arrow">↓ EVM → native code</div>
+      <div class="layer core"><div class="name">vaporchaind<small>chain/</small></div><div class="parts"><span class="part">EVM <code>cosmos/evm 0.7</code></span><span class="part">Settle precompile <code>0x…0900</code></span><span class="part"><code>x/settle</code> payments, fee split, invariants, gas burn</span><span class="part"><code>x/apps</code> app registry, quota, bonds</span><span class="part"><code>x/council</code> validators, guardian pause, IBC guard</span><span class="part"><code>lane</code> sponsored-lane cap</span></div></div>
+      <div class="arrow">↓ blocks</div>
+      <div class="layer"><div class="name">Consensus and interop<small>CometBFT · IBC</small></div><div class="parts"><span class="part">CometBFT 0.39, proof-of-authority validators</span><span class="part">~1 s blocks, 40M gas</span><span class="part">IBC transfer with rate limits for USDC in</span></div></div>
+    </div>
+  </div>
+</section>
+
+<section id="design">
+  <div class="wrap">
+    <div class="sec-hd">
+      <span class="eyebrow">Design choices</span>
+      <h2>What is hard to copy</h2>
+      <p class="lede">Most chains leave payments, sponsorship and spam limits to apps. VaporChain puts them in the protocol, where every validator enforces them.</p>
+    </div>
+    <div class="choices">
+      <div class="choice"><h3>Payments are part of consensus</h3><p>Settlement and revenue sharing run in a chain module, not in app contracts. One module account holds every ledger and invariants are checked every block. If one ever breaks, payments pause and the chain keeps producing blocks.</p><span class="where">chain/x/settle</span></div>
+      <div class="choice"><h3>Free for users, bounded for the chain</h3><p>Apps pay their users' gas, so users see no gas at all. The 50% lane cap is enforced in consensus, which means sponsorship can't be turned into a way to flood the network.</p><span class="where">chain/lane</span></div>
+      <div class="choice"><h3>Sponsorship nobody can farm</h3><p>An app earns gas quota from the fees it pays, or by bonding USDC that it can withdraw after 21 days. Quota grows in a straight line with capital, so splitting one bond across 100 fake apps buys exactly the same gas. No KYC, face scans or gatekeepers.</p><span class="where">chain/x/apps</span></div>
+      <div class="choice"><h3>Every transaction pays for compute</h3><p>Gas is a credit bought only with USDC at a fixed protocol price, and all of it is burned. An unsponsored ERC-20 transfer costs about $0.0017. Paying fees just to farm free gas returns at most $0.90 per dollar.</p><span class="where">chain/x/settle · gas burn</span></div>
+      <div class="choice"><h3>Open, with the core protected</h3><p>The protocol is AGPL-3.0, so a fork has to publish its source even if it only runs the code as a service. The SDK is Apache-2.0, so apps built on it stay fully yours. The name and logo are not licensed.</p><span class="where">NOTICE · TRADEMARKS.md</span></div>
+      <div class="choice"><h3>No hidden levers</h3><p>No admin path can seize funds, freeze a contract or switch a fork off. The guardian can pause for a limited time but can't unpause; only governance can. Removed validators can never rejoin.</p><span class="where">chain/x/council</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="numbers">
+  <div class="wrap">
+    <div class="sec-hd">
+      <span class="eyebrow">Benchmarks</span>
+      <h2>Read back from the chain</h2>
+      <p class="lede">Every figure below comes from the blocks themselves, checked independently of the load generator.</p>
+    </div>
+    <div class="nums">
+      <div class="num"><b>~186 tps</b><span>sustained with every transaction included</span></div>
+      <div class="num"><b>0.8 s</b><span>median time to finality</span></div>
+      <div class="num"><b>0.500</b><span>highest sponsored share of any block, over 3,008 sponsored txs</span></div>
+      <div class="num"><b>0</b><span>consensus failures, panics or invariant breaches under load</span></div>
+      <div class="num"><b>= to the wei</b><span>gas burned vs gas fees paid, across 55,870 transactions</span></div>
+      <div class="num"><b>$0.0017</b><span>cost of an unsponsored ERC-20 transfer</span></div>
+      <div class="num"><b>25M gas</b><span>per day of sponsorship from a 10,000 USDC bond, about 58 first-time users</span></div>
+      <div class="num"><b>0 / 8,962</b><span>spam transactions below the fee floor that got in</span></div>
+    </div>
+    <p class="note">Measured on a 4-validator network running mainnet parameters on one 4-vCPU machine, where CPU sets the ceiling at about 250–275 tps. A public testnet will replace these with real-world numbers. Full method and raw data: <a href="https://github.com/muthu2201/Vapor-chain/blob/main/docs/benchmarks/mainnet-sim.md">docs/benchmarks/mainnet-sim.md</a>.</p>
+  </div>
+</section>
+
+<section id="stack">
+  <div class="wrap">
+    <div class="sec-hd">
+      <span class="eyebrow">Stack</span>
+      <h2>Built on standard parts</h2>
+    </div>
+    <div class="specs">
+      <table>
+        <tr><th>Chain</th><td>Cosmos SDK 0.54.4 · CometBFT 0.39.4 · cosmos/evm 0.7.3 · ibc-go v11 · Go 1.26</td></tr>
+        <tr><th>Accounts</th><td>ERC-4337 v0.8 EntryPoint · EIP-7702 · ERC-7677 paymaster service</td></tr>
+        <tr><th>Contracts</th><td>Solidity 0.8.37 · Foundry · OpenZeppelin 5</td></tr>
+        <tr><th>Apps</th><td>TypeScript · viem · wagmi · React · Next.js 16</td></tr>
+        <tr><th>Identifiers</th><td class="mono">EVM chain IDs 77970 testnet · 779700 localnet · bech32 prefix vapor · Settle 0x0000000000000000000000000000000000000900</td></tr>
+        <tr><th>Licenses</th><td>AGPL-3.0 protocol · Apache-2.0 SDK, interfaces and examples · CC-BY-4.0 docs</td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section id="status">
+  <div class="wrap">
+    <div class="sec-hd">
+      <span class="eyebrow">Status</span>
+      <h2>Where it stands today</h2>
+    </div>
+    <div class="status">
+      <div class="stat">
+        <h3>Built and tested</h3>
+        <ul>
+          <li>Full one-signature USDC checkout, proven end to end on a live local network</li>
+          <li>CI on every change: Go race tests, Solidity tests, SDK and browser tests</li>
+          <li>Red-team pass, a drain audit of every path that moves value, and a written threat model</li>
+          <li>First outside contribution already reviewed and merged</li>
+        </ul>
+      </div>
+      <div class="stat no">
+        <h3>Not yet</h3>
+        <ul>
+          <li>Not independently audited</li>
+          <li>No public testnet or mainnet running yet</li>
+          <li>Known open issues are listed in the threat model, including upstream advisories</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="involved">
+  <div class="wrap">
+    <div class="sec-hd">
+      <span class="eyebrow">Get involved</span>
+      <h2>Looking for builders, auditors and critics</h2>
+      <p class="lede">Every contribution gets a real review. Starter tasks explain what to change, where, and how to test it.</p>
+    </div>
+    <div class="involve">
+      <a class="card" href="https://github.com/muthu2201/Vapor-chain/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22"><h3>Contribute</h3><p>Pick a good first issue in Go, Solidity, TypeScript or docs.</p><span class="go">good first issues →</span></a>
+      <a class="card" href="https://github.com/muthu2201/Vapor-chain/blob/main/docs/security/threat-model.md"><h3>Audit</h3><p>Try to break the invariants. Report anything exploitable privately.</p><span class="go">threat model →</span></a>
+      <a class="card" href="https://github.com/muthu2201/Vapor-chain/blob/main/docs/sdk/README.md"><h3>Build</h3><p>Ship a gasless USDC app with the TypeScript SDK and React hooks.</p><span class="go">SDK guide →</span></a>
+      <a class="card" href="https://github.com/muthu2201/Vapor-chain/blob/main/CONTRIBUTING.md"><h3>Learn the codebase</h3><p>How it was built, what not to touch, and how to run everything locally.</p><span class="go">CONTRIBUTING.md →</span></a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap row">
+    <span>VaporChain · <a href="https://github.com/muthu2201/Vapor-chain">github.com/muthu2201/Vapor-chain</a></span>
+    <span>Security reports: <a href="https://github.com/muthu2201/Vapor-chain/security/policy">SECURITY.md</a> · Not an offer of any token or investment.</span>
+  </div>
+</footer>
+</body>
+</html>
